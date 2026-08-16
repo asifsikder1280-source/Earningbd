@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TapBD</title>
+    <style>
+        :root {
+            --primary-color: #e2136e; /* bKash Pink */
+            --secondary-color: #2c3e50;
+            --bg-color: #f5f6fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --gold: #f1c40f;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            padding-bottom: 75px; 
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* --- AUTHENTICATION SCREEN --- */
+        #auth-screen {
+            max-width: 450px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .tab-btn-container {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        /* --- DASHBOARD SCREEN --- */
+        #dashboard-screen {
+            display: none; 
+        }
+
+        /* Dynamic View Container Layout blocks */
+        .app-view {
+            display: none;
+        }
+        .app-view.active-view {
+            display: block;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, var(--primary-color), #b80d56);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .header-profile {
+            position: relative;
+        }
+
+        /* Enlarged Top Header Profile Icon */
+        .header-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2.5px solid white;
+            background: #fff;
+            object-fit: cover;
+            display: block;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        /* --- SMOOTH RIGHT TO LEFT MARQUEE TICKER --- */
+        .admin-ticker-container {
+            background-color: var(--secondary-color);
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .admin-ticker-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marqueeMovingNotice 15s linear infinite;
+        }
+
+        @keyframes marqueeMovingNotice {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+
+        /* Bottom Fixed Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 25%;
+            height: 100%;
+            transition: color 0.2s;
+        }
+
+        .nav-item span.icon {
+            font-size: 1.3rem;
+            margin-bottom: 2px;
+        }
+
+        .nav-item.active-nav {
+            color: var(--primary-color);
+        }
+
+        /* Shared Styling Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 8px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .name-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            background-color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:disabled {
+            background-color: #f4f6f7;
+            color: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn:hover { background-color: #b80d56; }
+
+        /* --- TAPSWAP CLICKER INTERFACE --- */
+        .tap-game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 10px;
+            position: relative;
+        }
+
+        .tap-button-wrapper {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 15px 0;
+        }
+
+        .tap-coin-btn {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffe066 0%, #f1c40f 60%, #d4ac0d 100%);
+            box-shadow: 0 10px 25px rgba(241, 196, 15, 0.4), 
+                        inset 0 -8px 12px rgba(0,0,0,0.2), 
+                        inset 0 8px 12px rgba(255,255,255,0.6);
+            border: 6px solid #f39c12;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4.5rem;
+            transition: transform 0.05s ease;
+            touch-action: manipulation;
+        }
+
+        .tap-coin-btn:active {
+            transform: scale(0.93);
+        }
+
+        /* Energy Tracker Mechanics Layout UI */
+        .energy-status-container {
+            width: 100%;
+            max-width: 280px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .energy-label {
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .energy-bar-bg {
+            width: 100%;
+            height: 12px;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
+
+        .energy-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #e67e22);
+            border-radius: 10px;
+            transition: width 0.1s linear;
+        }
+
+        /* Options trigger buttons styling */
+        .btn-trigger-options {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            max-width: 280px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-trigger-options:hover { background-color: #1a252f; }
+
+        .btn-account-options {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+
+        /* Floating Score Text Animation Setup */
+        .floating-point {
+            position: absolute;
+            color: #f1c40f;
+            font-size: 1.6rem;
+            font-weight: 900;
+            pointer-events: none;
+            animation: floatUpAndFade 0.6s ease-out forwards;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 999;
+        }
+
+        @keyframes floatUpAndFade {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.2); }
+        }
+
+        /* Account Avatar Modification UI Block */
+        .account-avatar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .account-avatar-container {
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* Big, Upgraded Profile Presentation Icon */
+        .account-big-avatar {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            border: 4px solid var(--primary-color);
+            object-fit: cover;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
+        }
+        
+        .account-avatar-container:hover .account-big-avatar {
+            transform: scale(1.03);
+        }
+
+        /* Adjusted Edit Badge Position for the Big Icon */
+        .account-edit-badge {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: var(--secondary-color);
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2.5px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .hidden-file-input { display: none; }
+
+        /* --- POPUP MODAL ARCHITECTURE --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-overlay.hidden { display: none; }
+        
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 380px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .custom-modal h3 { margin-top: 0; color: var(--secondary-color); font-size: 1.2rem; }
+        .modal-btn-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        
+        /* Modal Option Row Styling */
+        .modal-option-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .modal-option-info h4 { margin: 0; font-size: 0.9rem; color: #334155; }
+        .modal-option-info span { font-size: 0.75rem; color: #64748b; }
+        .btn-modal-action { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer; }
+        .btn-modal-action:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+        .btn-mdl-logout { background-color: #f39c12; color: white; }
+        .btn-mdl-delete { background-color: #e74c3c; color: white; }
+        .btn-mdl-cancel { background-color: #95a5a6; color: white; padding: 12px; margin-top: 5px; }
+
+        /* --- SQUARE INTERACTIVE CROPPER --- */
+        .fb-crop-viewport {
+            width: 100%;
+            height: 250px;
+            background: #111;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            cursor: move;
+            touch-action: none; 
+        }
+        
+        #fb-crop-target-img {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            max-width: none;
+            pointer-events: none; 
+        }
+
+        /* Circular mask overlay frame */
+        .fb-crop-square-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            border: 2px dashed #fff;
+            border-radius: 50%; 
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65); 
+            pointer-events: none;
+        }
+
+        .fb-control-panel {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .fb-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .fb-slider-container input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .fb-move-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 120px;
+            margin: 0 auto;
+        }
+
+        .fb-move-btn {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .fb-move-btn:hover { background: #e2e8f0; }
+
+        #hidden-crop-canvas { 
+            display: none; 
+            width: 100px;
+            height: 100px;
+        }
+
+        .task-list { display: flex; flex-direction: column; gap: 12px; }
+        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fdfefe; border: 1px solid #e5e8e8; border-radius: 8px; }
+        .task-info h4 { margin: 0; font-size: 0.95rem; }
+        .task-info span { font-size: 0.8rem; color: #27ae60; font-weight: bold; }
+        .btn-task { background: #2ecc71; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .notice { background-color: #fdf2f4; border: 1px solid #fadbd8; color: #c0392b; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- AUTHENTICATION VIEW CONTAINER -->
+    <div id="auth-screen">
+        <div class="auth-header">
+            <h1>Earningbd</h1>
+            <p>start earning with us</p>
+        </div>
+
+        <div class="card">
+            <div class="tab-btn-container">
+                <button class="tab-btn active" id="tab-login-btn" onclick="switchAuthTab('login')">Log In</button>
+                <button class="tab-btn" id="tab-signup-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" class="auth-form active" onsubmit="handleAuthSubmit(event)">
+                <div class="form-group">
+                    <label>Phone Number or Email</label>
+                    <input type="text" id="login-identity-input" placeholder="Enter" required>
+                </div>
+                <div class="form-group">
+                    <label>OTP Code</label>
+                    <input type="text" placeholder="Enter 4 or 6-digit OTP">
+                </div>
+                <button type="submit" class="btn">Log In</button>
+            </form>
+
+            <!-- SIGN UP FORM -->
+            <form id="signup-form" class="auth-form" onsubmit="handleAuthSubmit(event)">
+                <div class="name-grid">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>First Name</label>
+                        <input type="text" id="first-name-input" placeholder="Enter" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Last Name</label>
+                        <input type="text" id="last-name-input" placeholder="Enter" required>
+                    </div>
+                </div>
+
+                <div class="name-grid">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Birth Date</label>
+                        <input type="date" id="birth-date-input" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Gender</label>
+                        <select id="signup-gender-select" required>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC REGIONAL DATA LOCATION INPUT FIELDS -->
+                <div class="name-grid" style="margin-top: 15px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>District Name </label>
+                        <select id="signup-district-select" onchange="populateUpazilaOptions(this.value, 'signup-upazila-select')" required>
+                            <option value="">Select District</option>
+                            <option value="Dhaka">Dhaka</option>
+                            <option value="Gazipur">Gazipur</option>
+                            <option value="Narayanganj">Narayanganj</option>
+                            <option value="Tangail">Tangail</option>
+                            <option value="Faridpur">Faridpur</option>
+                            <option value="Gopalganj">Gopalganj</option>
+                            <option value="Kishoreganj">Kishoreganj</option>
+                            <option value="Madaripur">Madaripur</option>
+                            <option value="Manikganj">Manikganj</option>
+                            <option value="Munshiganj">Munshiganj</option>
+                            <option value="Narsingdi">Narsingdi</option>
+                            <option value="Rajbari">Rajbari</option>
+                            <option value="Shariatpur">Shariatpur</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Upazila</label>
+                        <select id="signup-upazila-select" required>
+                            <option value="">Select Upazila</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Sign Up Using</label>
+                    <select id="signup-method-select" onchange="toggleSignupMethodField()">
+                        <option value="mobile">Mobile Number</option>
+                        <option value="gmail">Gmail Address</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="signup-contact-container">
+                    <label id="signup-contact-label">Mobile Number</label>
+                    <input type="text" id="signup-contact-input" placeholder="01XXXXXXXXX" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Referral Code (Optional)</label>
+                    <input type="text" placeholder="e.g., EARN99X">
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- CORE APPLICATION PANEL INTERFACE -->
+    <div class="container" id="dashboard-screen">
+        
+        <header>
+            <div>
+                <h1 style="font-size: 1.1rem; opacity: 0.9;"></h1>
+                <p style="margin:0; font-size:1.3rem; font-weight:bold;"><span id="welcome-name">User</span></p>
+                <div style="margin-top: 5px; font-size: 0.8rem; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 10px;">
+                    🪙 <span id="header-coins">1,250</span> Coins | <span id="header-level">🥉 Bronze Level</span>
+                </div>
+            </div>
+            <div class="header-profile">
+                <!-- Upgraded Large Header Avatar Layout -->
+                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" class="header-avatar" id="global-header-avatar" alt="User Profile">
+            </div>
+        </header>
+
+        <!-- RIGHT TO LEFT SLIDE MOVING ADMIN TICKER -->
+        <div class="admin-ticker-container">
+            <div class="admin-ticker-text">
+                📢 Admin Contact Number: +880 1700-000000 | Join our official channels for direct payments support and withdrawal guidelines! 🌟
+            </div>
+        </div>
+
+        <!-- DASHBOARD HOME CLICKER CARD -->
+        <div id="view-home" class="app-view active-view">
+            <div class="card tap-game-container">
+                <h2>Tap to Earn Coins</h2>
+                <p style="color: #7f8c8d; font-size: 0.9rem; margin-top: 5px; margin-bottom: 5px;">Tap the giant coin to farm instantly!</p>
+                
+                <div class="tap-button-wrapper">
+                    <button class="tap-coin-btn" id="coin-clicker-target" onmousedown="handleCoinTap(event)" ontouchstart="handleCoinTap(event)">🪙</button>
+                </div>
+
+                <div class="energy-status-container">
+                    <div class="energy-label">
+                        <span>⚡ Energy Limit</span>
+                        <span><span id="current-energy">500</span> / <span id="max-energy">500</span></span>
+                    </div>
+                    <div class="energy-bar-bg">
+                        <div class="energy-bar-fill" id="energy-progress-bar"></div>
+                    </div>
+                </div>
+
+                <!-- SINGLE REFILL OPTION TRIGGER BUTTON -->
+                <button class="btn-trigger-options" onclick="openTankRefillModal()">🚀 Tank Refill Options</button>
+            </div>
+        </div>
+
+        <div id="view-tasks" class="app-view">
+            <div class="card">
+                <h2>✅ Tasks & Rewards</h2>
+                <div class="task-list">
+                    <div class="task-item">
+                        <div class="task-info"><h4>Watch Ads Video</h4><span>+500 Coins</span></div>
+                        <button class="btn-task" onclick="addCoins(500)">Watch</button>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-info"><h4>Daily Check-in</h4><span>+1000 Coins</span></div>
+                        <button class="btn-task" id="daily-checkin-btn" onclick="addCoins(1000); this.disabled=true; this.style.backgroundColor='#95a5a6'; this.innerText='Claimed';">Claim</button>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-info"><h4>Social Media Follow</h4><span>+300 Coins</span></div>
+                        <button class="btn-task" onclick="addCoins(300)">Follow</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-payment" class="app-view">
+            <div class="card">
+                <h2>💸 Cash Out Request (bKash)</h2>
+                <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
+                <form onsubmit="event.preventDefault(); alert('Withdrawal processing securely!');">
+                    <div class="form-group">
+                        <label>bKash Mobile Number</label>
+                        <input type="tel" placeholder="Enter bKash Number" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (BDT)</label>
+                        <input type="number" min="100" placeholder="Minimum 100 TK" required>
+                    </div>
+                    <button type="submit" class="btn">Submit Cash Out</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ACCOUNT PROFILE DATA PANEL -->
+        <div id="view-account" class="app-view">
+            <div class="card">
+                <h2>👤 Manage Profile</h2>
+                
+                <div class="account-avatar-wrapper">
+                    <div class="account-avatar-container" onclick="triggerAccountPhotoUpload()" title="Click to upload profile photo">
+                        <!-- Upgraded Massive Interactive Avatar Container -->
+                        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" class="account-big-avatar" id="account-view-avatar" alt="Large Avatar View">
+                        <div class="account-edit-badge">✏️</div>
+                    </div>
+                    <input type="file" id="account-hidden-file-input" class="hidden-file-input" accept="image/*" onchange="openSquareCropper(event)">
+                </div>
+
+                <div class="name-grid">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="account-first-name" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="account-last-name" disabled>
+                    </div>
+                </div>
+
+                <div class="name-grid">
+                    <div class="form-group">
+                        <label>Birth Date</label>
+                        <input type="text" id="account-birth-date" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <input type="text" id="account-gender" disabled>
+                    </div>
+                </div>
+
+                <!-- PROFILE REGION INFORMATION VIEW SLOTS -->
+                <div class="name-grid">
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" id="account-district" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Upazila</label>
+                        <input type="text" id="account-upazila" disabled>
+                    </div>
+                </div>
+
+                <button class="btn-trigger-options btn-account-options" onclick="openAccountActionModal()">⚙️ Account Options</button>
+            </div>
+        </div>
+
+        <!-- Fixed Base Nav Structure -->
+        <nav class="bottom-nav">
+            <div class="nav-item active-nav" onclick="switchView('view-home', this)">
+                <span class="icon">🏠</span><span>Home</span>
+            </div>
+            <div class="nav-item" onclick="switchView('view-tasks', this)">
+                <span class="icon">📋</span><span>Tasks</span>
+            </div>
+            <div class="nav-item" onclick="switchView('view-payment', this)">
+                <span class="icon">💰</span><span>Payout</span>
+            </div>
+            <div class="nav-item" onclick="switchView('view-account', this)">
+                <span class="icon">👤</span><span>Account</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- MAIN ACCOUNT OPTIONS MODAL WINDOW -->
+    <div id="accountOptionsModal" class="modal-overlay hidden">
+        <div class="custom-modal">
+            <h3>Account Settings</h3>
+            <p style="font-size: 0.9rem; color: #555;">Choose an option below regarding your active session:</p>
+            <div class="modal-btn-stack">
+                <button class="btn btn-mdl-logout" onclick="executeSessionLogout()">1. Log Out</button>
+                <button class="btn btn-mdl-delete" onclick="executeAccountDeletion()">2. Account Delete</button>
+                <button class="btn btn-mdl-cancel" onclick="closeAccountActionModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TANK REFILL MODAL -->
+    <div id="tankRefillModal" class="modal-overlay hidden">
+        <div class="custom-modal">
+            <h3>Tank Refills & Upgrades</h3>
+            <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">Purchase boosts directly extracted from your coin wallet balance:</p>
+            
+            <div class="modal-btn-stack" style="gap: 8px;">
+                <div class="modal-option-row">
+                    <div class="modal-option-info"><h4>⚡ +100 Taps</h4><span>Cost: 90 Coins</span></div>
+                    <button class="btn-modal-action" onclick="purchaseTankBoost(100, 90)">Buy</button>
+                </div>
+                <div class="modal-option-row">
+                    <div class="modal-option-info"><h4>⚡ +200 Taps</h4><span>Cost: 180 Coins</span></div>
+                    <button class="btn-modal-action" onclick="purchaseTankBoost(200, 180)">Buy</button>
+                </div>
+                <div class="modal-option-row">
+                    <div class="modal-option-info"><h4>⚡ +300 Taps</h4><span>Cost: 270 Coins</span></div>
+                    <button class="btn-modal-action" onclick="purchaseTankBoost(200, 180)">Buy</button>
+                </div>
+                <div class="modal-option-row">
+                    <div class="modal-option-info"><h4>⚡ +500 Taps</h4><span>Cost: 450 Coins</span></div>
+                    <button class="btn-modal-action" onclick="purchaseTankBoost(500, 450)">Buy</button>
+                </div>
+                <div class="modal-option-row" style="border: 1px solid #9b59b6; background: #faf5fc;">
+                    <div class="modal-option-info">
+                        <h4 style="color:#8e44ad;">🌟 Max Energy 1,000</h4>
+                        <span>Cost: 5,000 Coins (Permanent)</span>
+                    </div>
+                    <button class="btn-modal-action" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);" id="max-upgrade-btn" onclick="upgradeMaxEnergyLimit()">Upgrade</button>
+                </div>
+                
+                <button class="btn btn-mdl-cancel" onclick="closeTankRefillModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTERACTIVE SQUARE CROPPER MODAL SYSTEM -->
+    <div id="fbCropperModal" class="modal-overlay hidden">
+        <div class="custom-modal" style="max-width: 420px; width: 90%;">
+            <h3>Edit Profile Picture</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">Drag or use pinch fingers to change position and zoom size</p>
+            
+            <div class="fb-crop-viewport" id="fbCropContainer" onmousedown="startImgDrag(event)" ontouchstart="startImgDrag(event)">
+                <img id="fb-crop-target-img" src="" alt="Square Cropper Workspace">
+                <div class="fb-crop-square-overlay"></div>
+            </div>
+
+            <!-- Enhanced Cropper Interface Panel -->
+            <div class="fb-control-panel">
+                <div class="fb-slider-container">
+                    <span>🔎 Zoom</span>
+                    <input type="range" id="fb-zoom-slider" min="1" max="4" step="0.01" value="1" oninput="handleSliderZoom(this.value)">
+                </div>
+                <div class="fb-move-grid">
+                    <div></div>
+                    <button class="fb-move-btn" onclick="nudgeImage(0, -10)">▲</button>
+                    <div></div>
+                    <button class="fb-move-btn" onclick="nudgeImage(-10, 0)">◀</button>
+                    <button class="fb-move-btn" onclick="resetCropMatrix()">🔄</button>
+                    <button class="fb-move-btn" onclick="nudgeImage(10, 0)">▶</button>
+                    <div></div>
+                    <button class="fb-move-btn" onclick="nudgeImage(0, 10)">▼</button>
+                    <div></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap: 10px;">
+                <button class="btn" style="background:#2ecc71;" onclick="renderAndSaveSquareCrop()">Save Profile Picture</button>
+                <button class="btn" style="background:#95a5a6;" onclick="closeSquareCropper()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set output to standard resolution properties -->
+    <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
+
+    <script>
+        // System Application Context Parameters
+        let currentSessionUser = null;
+        let totalCoins = 1250;
+        let energyLimit = 500;
+        let maxEnergyCapacity = 500;
+        
+        // Default Placeholder SVG Image Base String 
+        const defaultAvatarBase64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+
+        // Comprehensive Dataset Mapping of Dhaka Division Districts and Upazilas
+        const dhakaDivisionData = {
+            "Dhaka": ["Dhamrai", "Dohar", "Keraniganj", "Nawabganj", "Savar", "Tejgaon Circle"],
+            "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur"],
+            "Narayanganj": ["Araihazar", "Bandar", "Narayanganj Sadar", "Rupganj", "Sonargaon"],
+            "Tangail": ["Tangail Sadar", "Sakhipur", "Basail", "Madhupur", "Ghatail", "Kalihati", "Nagarpur", "Mirzapur", "Gopalpur", "Delduar", "Bhuapur", "Dhanbari"],
+            "Faridpur": ["Faridpur Sadar", "Boalmari", "Alfadanga", "Madhukhali", "Bhanga", "Nagarkanda", "Charbhadrasan", "Sadarpur", "Saltha"],
+            "Gopalganj": ["Gopalganj Sadar", "Kashiani", "Kotalipara", "Muksudpur", "Tungipara"],
+            "Kishoreganj": ["Kishoreganj Sadar", "Itna", "Katiadi", "Bhairab", "Tarail", "Hossainpur", "Pakundia", "Kuliarchar", "Karimganj", "Bajitpur", "Nikli", "Mithamain", "Austagram"],
+            "Madaripur": ["Madaripur Sadar", "Kalkini", "Rajoir", "Shibchar"],
+            "Manikganj": ["Manikganj Sadar", "Singair", "Shibalaya", "Saturia", "Harirampur", "Gheor", "Daulatpur"],
+            "Munshiganj": ["Munshiganj Sadar", "Sreenagar", "Sirajdikhan", "Louhajang", "Gajaria", "Tongibari"],
+            "Narsingdi": ["Narsingdi Sadar", "Belabo", "Monohardi", "Palash", "Raipura", "Shibpur"],
+            "Rajbari": ["Rajbari Sadar", "Baliakandi", "Goalandaghat", "Pangsha", "Kalukhali"],
+            "Shariatpur": ["Shariatpur Sadar", "Damudya", "Naria", "Zajira", "Bhedarganj", "Gosairhat"]
+        };
+
+        // Core Matrix Variables for Perfect Math-based Cropping
+        let imgX = 0, imgY = 0;
+        let scaleFactor = 1;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let startTouchDistance = 0; 
+        let baseScaleOnTouchStart = 1;
+        let loadedImgElement = new Image();
+
+        // Cached dimensions of the active bounding target space
+        let initialDisplayWidth = 0;
+        let initialDisplayHeight = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleSignupMethodField();
+            syncCoinDisplayLayout();
+
+            // Set dragging global event systems setup
+            window.addEventListener('mousemove', handleImgDrag);
+            window.addEventListener('touchmove', handleImgDrag, { passive: false });
+            window.addEventListener('mouseup', endImgDrag);
+            window.addEventListener('touchend', endImgDrag);
+        });
+
+        // Function to fill the Upazila Dropdown dynamically based on selected District
+        function populateUpazilaOptions(selectedDistrict, upazilaSelectId) {
+            const upazilaDropdown = document.getElementById(upazilaSelectId);
+            upazilaDropdown.innerHTML = '<option value="">Select Upazila</option>';
+
+            if (selectedDistrict && dhakaDivisionData[selectedDistrict]) {
+                dhakaDivisionData[selectedDistrict].forEach(upazila => {
+                    const el = document.createElement('option');
+                    el.value = upazila;
+                    el.innerText = upazila;
+                    upazilaDropdown.appendChild(el);
+                });
+            }
+        }
+
+        function syncCoinDisplayLayout() {
+            document.getElementById('header-coins').innerText = totalCoins.toLocaleString();
+            document.getElementById('current-energy').innerText = energyLimit;
+            document.getElementById('max-energy').innerText = maxEnergyCapacity;
+            
+            const fillWidth = (energyLimit / maxEnergyCapacity) * 100;
+            document.getElementById('energy-progress-bar').style.width = fillWidth + '%';
+        }
+
+        function switchAuthTab(type) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            
+            if (type === 'login') {
+                document.getElementById('tab-login-btn').classList.add('active');
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.getElementById('tab-signup-btn').classList.add('active');
+                document.getElementById('signup-form').classList.add('active');
+            }
+        }
+
+        function toggleSignupMethodField() {
+            const selector = document.getElementById('signup-method-select').value;
+            const targetLabel = document.getElementById('signup-contact-label');
+            const targetInput = document.getElementById('signup-contact-input');
+
+            if (selector === 'mobile') {
+                targetLabel.innerText = "Bangladeshi Mobile Number";
+                targetInput.placeholder = "e.g. 01712345678";
+                targetInput.type = "text";
+                targetInput.setAttribute("pattern", "^01[3-9]\\d{8}$");
+            } else {
+                targetLabel.innerText = "Gmail Address";
+                targetInput.placeholder = "username@gmail.com";
+                targetInput.type = "text";
+                targetInput.setAttribute("pattern", "^[a-zA-Z0-9._%+-]+@gmail\\.com$");
+            }
+        }
+
+        function fetchStoredDatabase() {
+            const data = localStorage.getItem('tapbd_users_v2');
+            return data ? JSON.parse(data) : [];
+        }
+
+        function commitToStoredDatabase(identity, profileData) {
+            const database = fetchStoredDatabase();
+            const index = database.findIndex(user => user.uid === identity);
+            
+            if (index !== -1) {
+                // Update profile info safely if it exists
+                database[index].data = profileData;
+            } else {
+                // Add brand new data entry row block
+                database.push({ uid: identity, data: profileData });
+            }
+            localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
+        }
+
+        function handleAuthSubmit(event) {
+            event.preventDefault();
+            const activeFormId = event.target.id;
+            const database = fetchStoredDatabase();
+
+            let fName = "User";
+            let lName = "";
+            let bDate = "Not Provided";
+            let gender = "Male";
+            let district = "Not Set";
+            let upazila = "Not Set";
+            let loadedAvatar = defaultAvatarBase64;
+
+            if (activeFormId === 'signup-form') {
+                const rawIdentity = document.getElementById('signup-contact-input').value.trim().toLowerCase();
+                fName = document.getElementById('first-name-input').value.trim();
+                lName = document.getElementById('last-name-input').value.trim();
+                bDate = document.getElementById('birth-date-input').value;
+                gender = document.getElementById('signup-gender-select').value;
+                district = document.getElementById('signup-district-select').value;
+                upazila = document.getElementById('signup-upazila-select').value;
+                
+                const exists = database.some(user => user.uid === rawIdentity);
+                if (exists) {
+                    alert("This user is already registered.");
+                    return;
+                }
+
+                const profileObj = { 
+                    firstName: fName, 
+                    lastName: lName, 
+                    birthDate: bDate, 
+                    gender: gender,
+                    district: district,
+                    upazila: upazila,
+                    profilePic: defaultAvatarBase64 // Assign standard avatar placeholder initially
+                };
+                commitToStoredDatabase(rawIdentity, profileObj);
+                currentSessionUser = rawIdentity;
+            } else {
+                const rawIdentity = document.getElementById('login-identity-input').value.trim().toLowerCase();
+                const matchedUser = database.find(user => user.uid === rawIdentity);
+
+                if (!matchedUser) {
+                    alert("Login Denied! This user is not registered yet.");
+                    return;
+                }
+
+                currentSessionUser = rawIdentity;
+                fName = matchedUser.data.firstName || rawIdentity;
+                lName = matchedUser.data.lastName || "";
+                bDate = matchedUser.data.birthDate || "Not Provided";
+                gender = matchedUser.data.gender || "Male";
+                district = matchedUser.data.district || "Not Set";
+                upazila = matchedUser.data.upazila || "Not Set";
+                loadedAvatar = matchedUser.data.profilePic || defaultAvatarBase64;
+            }
+
+            // Sync visual UI elements
+            document.getElementById('welcome-name').innerText = fName + " " + lName;
+            document.getElementById('account-first-name').value = fName;
+            document.getElementById('account-last-name').value = lName;
+            document.getElementById('account-birth-date').value = bDate;
+            document.getElementById('account-gender').value = gender;
+            document.getElementById('account-district').value = district;
+            document.getElementById('account-upazila').value = upazila;
+            
+            // REMEMBER & LOAD IMAGES AUTOMATICALLY - SECOND TIME NO NEED TO UPLOAD
+            document.getElementById('global-header-avatar').src = loadedAvatar;
+            document.getElementById('account-view-avatar').src = loadedAvatar;
+
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('dashboard-screen').style.display = 'block';
+        }
+
+        function triggerAccountPhotoUpload() {
+            document.getElementById('account-hidden-file-input').click();
+        }
+
+        function openSquareCropper(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    loadedImgElement.src = e.target.result;
+                    loadedImgElement.onload = function() {
+                        const targetImg = document.getElementById('fb-crop-target-img');
+                        targetImg.src = loadedImgElement.src;
+                        
+                        const ratio = loadedImgElement.width / loadedImgElement.height;
+                        if (ratio >= 1) {
+                            initialDisplayHeight = 250;
+                            initialDisplayWidth = 250 * ratio;
+                        } else {
+                            initialDisplayWidth = 250;
+                            initialDisplayHeight = 250 / ratio;
+                        }
+                        
+                        targetImg.style.width = initialDisplayWidth + "px";
+                        targetImg.style.height = initialDisplayHeight + "px";
+                        
+                        document.getElementById('fbCropperModal').classList.remove('hidden');
+                        resetCropMatrix();
+                    };
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function resetCropMatrix() {
+            imgX = 0;
+            imgY = 0;
+            scaleFactor = 1;
+            document.getElementById('fb-zoom-slider').value = 1;
+            updateCropPositionMatrix();
+        }
+
+        function updateCropPositionMatrix() {
+            const targetImg = document.getElementById('fb-crop-target-img');
+            targetImg.style.transform = `translate(calc(-50% + ${imgX}px), calc(-50% + ${imgY}px)) scale(${scaleFactor})`;
+        }
+
+        function handleSliderZoom(val) {
+            scaleFactor = parseFloat(val);
+            updateCropPositionMatrix();
+        }
+
+        function nudgeImage(dx, dy) {
+            imgX += dx;
+            imgY += dy;
+            updateCropPositionMatrix();
+        }
+
+        function startImgDrag(e) {
+            isDragging = true;
+            
+            if (e.touches && e.touches.length === 2) {
+                startTouchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                baseScaleOnTouchStart = scaleFactor;
+            } else {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                startX = clientX - imgX;
+                startY = clientY - imgY;
+            }
+        }
+
+        function handleImgDrag(e) {
+            if (!isDragging) return;
+
+            if (e.touches && e.touches.length === 2) {
+                e.preventDefault(); 
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                if (startTouchDistance > 0) {
+                    let newScale = baseScaleOnTouchStart * (currentDistance / startTouchDistance);
+                    newScale = Math.max(1, Math.min(4, newScale));
+                    scaleFactor = newScale;
+                    document.getElementById('fb-zoom-slider').value = newScale;
+                    updateCropPositionMatrix();
+                }
+            } else {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                imgX = clientX - startX;
+                imgY = clientY - startY;
+                updateCropPositionMatrix();
+            }
+        }
+
+        function endImgDrag() {
+            isDragging = false;
+            startTouchDistance = 0;
+        }
+
+        function closeSquareCropper() {
+            document.getElementById('fbCropperModal').classList.add('hidden');
+            document.getElementById('account-hidden-file-input').value = "";
+        }
+
+        function renderAndSaveSquareCrop() {
+            const canvas = document.getElementById('hidden-crop-canvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cropSideLength = 180; 
+
+            const factorX = loadedImgElement.width / initialDisplayWidth;
+            const factorY = loadedImgElement.height / initialDisplayHeight;
+
+            const extractWidthOnDisplay = cropSideLength / scaleFactor;
+            const extractHeightOnDisplay = cropSideLength / scaleFactor;
+
+            const sourceX = (initialDisplayWidth / 2 - imgX - extractWidthOnDisplay / 2) * factorX;
+            const sourceY = (initialDisplayHeight / 2 - imgY - extractHeightOnDisplay / 2) * factorY;
+            const sourceW = extractWidthOnDisplay * factorX;
+            const sourceH = extractHeightOnDisplay * factorY;
+
+            ctx.drawImage(
+                loadedImgElement,
+                sourceX, sourceY, sourceW, sourceH,
+                0, 0, 100, 100
+            );
+
+            const finalizedImgDataUrl = canvas.toDataURL('image/png');
+            document.getElementById('global-header-avatar').src = finalizedImgDataUrl;
+            document.getElementById('account-view-avatar').src = finalizedImgDataUrl;
+
+            // SAVE AVATAR TO LOCAL STORAGE LINKED WITH ACTIVE USER PROFILES
+            if (currentSessionUser) {
+                const database = fetchStoredDatabase();
+                const currentMatchedRecord = database.find(user => user.uid === currentSessionUser);
+                if (currentMatchedRecord) {
+                    currentMatchedRecord.data.profilePic = finalizedImgDataUrl;
+                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
+                }
+            }
+
+            closeSquareCropper();
+            alert("Profile picture saved into database permanently!");
+        }
+
+        /* --- TANK REFILL MODAL HANDLERS --- */
+        function openTankRefillModal() {
+            document.getElementById('tankRefillModal').classList.remove('hidden');
+        }
+
+        function closeTankRefillModal() {
+            document.getElementById('tankRefillModal').classList.add('hidden');
+        }
+
+        function purchaseTankBoost(tapsAmount, costCoins) {
+            if (totalCoins < costCoins) {
+                alert("Insufficient wallet balance for this booster package purchase!");
+                return;
+            }
+            if (energyLimit + tapsAmount > maxEnergyCapacity) {
+                alert(`Cannot exceed active ceiling limit! Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
+                return;
+            }
+
+            totalCoins -= costCoins;
+            energyLimit += tapsAmount;
+            syncCoinDisplayLayout();
+            alert(`Success! Loaded +${tapsAmount} energy taps.`);
+        }
+
+        function upgradeMaxEnergyLimit() {
+            if (totalCoins < 5000) {
+                alert("Permanent structural expansion requires 5,000 coins.");
+                return;
+            }
+            if (maxEnergyCapacity === 1000) {
+                alert("Expansion already completed!");
+                return;
+            }
+
+            totalCoins -= 5000;
+            maxEnergyCapacity = 1000;
+            energyLimit = 1000; 
+            syncCoinDisplayLayout();
+            
+            const upgradeBtn = document.getElementById('max-upgrade-btn');
+            upgradeBtn.innerText = "Maxed";
+            upgradeBtn.disabled = true;
+
+            alert("Energy tank capacity limit expanded to 1,000 taps!");
+        }
+
+        /* --- ACCOUNT OPTIONS MODAL HANDLERS --- */
+        function openAccountActionModal() {
+            document.getElementById('accountOptionsModal').classList.remove('hidden');
+        }
+
+        function closeAccountActionModal() {
+            document.getElementById('accountOptionsModal').classList.add('hidden');
+        }
+
+        function executeSessionLogout() {
+            closeAccountActionModal();
+            currentSessionUser = null;
+            document.getElementById('dashboard-screen').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'block';
+            alert("Logged out securely.");
+        }
+
+        function executeAccountDeletion() {
+            const approval = confirm("Permanently delete your account registration?");
+            if(approval) {
+                closeAccountActionModal();
+                currentSessionUser = null;
+                document.getElementById('dashboard-screen').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'block';
+                alert("Your account data was wiped successfully.");
+            }
+        }
+
+        function switchView(viewId, navElement) {
+            document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active-view'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active-nav'));
+            
+            document.getElementById(viewId).classList.add('active-view');
+            navElement.classList.add('active-nav');
+        }
+
+        function handleCoinTap(e) {
+            e.preventDefault();
+            if (energyLimit <= 0) return;
+
+            energyLimit--;
+            totalCoins += 1;
+            
+            syncCoinDisplayLayout();
+
+            const target = document.getElementById('coin-clicker-target');
+            const rect = target.getBoundingClientRect();
+            const point = document.createElement('div');
+            point.className = 'floating-point';
+            point.innerText = '+1';
+            
+            point.style.left = (rect.left + rect.width / 2 - 10) + 'px';
+            point.style.top = (rect.top + 10) + 'px';
+            
+            document.body.appendChild(point);
+            setTimeout(() => point.remove(), 600);
+        }
+
+        function addCoins(amount) {
+            totalCoins += amount;
+            syncCoinDisplayLayout();
+            alert(`Earned +${amount} Coins successfully!`);
+        }
+    </script>
+</body>
+</html>
