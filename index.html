@@ -1381,25 +1381,27 @@
             alert(`Earned +${amount} Coins successfully!`);
         }
     </script>
-</body>// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+<!-- Firebase SDK Module -->
+<script type="module">
+  // CDN Link থেকে Firebase SDK Import
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
-  authDomain: "earningbd-37459.firebaseapp.com",
-  projectId: "earningbd-37459",
-  storageBucket: "earningbd-37459.firebasestorage.app",
-  messagingSenderId: "301820085906",
-  appId: "1:301820085906:web:bfcd774e1ba5f168a0484b",
-  measurementId: "G-7WJL76YJPE"
-};
+  // Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
+    authDomain: "earningbd-37459.firebaseapp.com",
+    projectId: "earningbd-37459",
+    storageBucket: "earningbd-37459.firebasestorage.app",
+    messagingSenderId: "301820085906",
+    appId: "1:301820085906:web:bfcd774e1ba5f168a0484b",
+    measurementId: "G-7WJL76YJPE"
+  };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
+</body>
 </html>
