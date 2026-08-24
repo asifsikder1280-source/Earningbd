@@ -638,8 +638,8 @@
             <!-- LOGIN FORM -->
             <form id="login-form" class="auth-form active" onsubmit="handleAuthSubmit(event)">
                 <div class="form-group">
-                    <label>Phone Number or Email</label>
-                    <input type="text" id="login-identity-input" placeholder="Enter Mobile Number or Gmail" required>
+                    <label>Email Address</label>
+                    <input type="email" id="login-identity-input" placeholder="Enter Gmail Address" required>
                 </div>
                 <div class="form-group">
                     <label>Password</label>
@@ -704,17 +704,9 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-top: 15px;">
-                    <label>Sign Up Using</label>
-                    <select id="signup-method-select" onchange="toggleSignupMethodField()">
-                        <option value="mobile">Mobile Number</option>
-                        <option value="gmail">Gmail Address</option>
-                    </select>
-                </div>
-
-                <div class="form-group" id="signup-contact-container">
-                    <label id="signup-contact-label">Mobile Number</label>
-                    <input type="text" id="signup-contact-input" placeholder="01XXXXXXXXX" required>
+                <div class="form-group" id="signup-contact-container" style="margin-top: 15px;">
+                    <label id="signup-contact-label">Gmail Address</label>
+                    <input type="email" id="signup-contact-input" placeholder="username@gmail.com" required>
                 </div>
 
                 <div class="form-group">
@@ -988,13 +980,31 @@
 
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
+    <!-- FIREBASE COMPAT SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
     <script>
+        // FIREBASE CONFIGURATION SETUP
+        const firebaseConfig = {
+            apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
+            authDomain: "earningbd-37459.firebaseapp.com",
+            projectId: "earningbd-37459",
+            storageBucket: "earningbd-37459.firebasestorage.app",
+            messagingSenderId: "301820085906",
+            appId: "1:301820085906:web:bfcd774e1ba5f168a0484b",
+            measurementId: "G-7WJL76YJPE"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
         let currentSessionUser = null;
         let totalCoins = 100;
         let energyLimit = 500;
         let maxEnergyCapacity = 500;
         
-        // TAP AD COUNTER LOGIC
         let tapCounter = 0;
         
         const defaultAvatarBase64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
@@ -1027,8 +1037,6 @@
         let initialDisplayHeight = 0;
 
         window.addEventListener('DOMContentLoaded', () => {
-            toggleSignupMethodField();
-
             window.addEventListener('mousemove', handleImgDrag);
             window.addEventListener('touchmove', handleImgDrag, { passive: false });
             window.addEventListener('mouseup', endImgDrag);
@@ -1084,24 +1092,6 @@
             }
         }
 
-        function toggleSignupMethodField() {
-            const selector = document.getElementById('signup-method-select').value;
-            const targetLabel = document.getElementById('signup-contact-label');
-            const targetInput = document.getElementById('signup-contact-input');
-
-            if (selector === 'mobile') {
-                targetLabel.innerText = "Bangladeshi Mobile Number";
-                targetInput.placeholder = "e.g. 01712345678";
-                targetInput.type = "text";
-                targetInput.setAttribute("pattern", "^01[3-9]\\d{8}$");
-            } else {
-                targetLabel.innerText = "Gmail Address";
-                targetInput.placeholder = "username@gmail.com";
-                targetInput.type = "text";
-                targetInput.setAttribute("pattern", "^[a-zA-Z0-9._%+-]+@gmail\\.com$");
-            }
-        }
-
         function fetchStoredDatabase() {
             const data = localStorage.getItem('tapbd_users_v2');
             return data ? JSON.parse(data) : [];
@@ -1119,76 +1109,77 @@
             localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
         }
 
+        // FIREBASE AUTHENTICATION integration
         function handleAuthSubmit(event) {
             event.preventDefault();
             const activeFormId = event.target.id;
-            const database = fetchStoredDatabase();
-
-            let fName = "User";
-            let lName = "";
-            let bDate = "Not Provided";
-            let gender = "Male";
-            let district = "Not Set";
-            let upazila = "Not Set";
-            let loadedAvatar = defaultAvatarBase64;
 
             if (activeFormId === 'signup-form') {
-                const rawIdentity = document.getElementById('signup-contact-input').value.trim().toLowerCase();
+                const email = document.getElementById('signup-contact-input').value.trim();
                 const password = document.getElementById('signup-password-input').value;
-                fName = document.getElementById('first-name-input').value.trim();
-                lName = document.getElementById('last-name-input').value.trim();
-                bDate = document.getElementById('birth-date-input').value;
-                gender = document.getElementById('signup-gender-select').value;
-                district = document.getElementById('signup-district-select').value;
-                upazila = document.getElementById('signup-upazila-select').value;
-                
-                const exists = database.some(user => user.uid === rawIdentity);
-                if (exists) {
-                    alert("This user is already registered.");
-                    return;
-                }
+                const fName = document.getElementById('first-name-input').value.trim();
+                const lName = document.getElementById('last-name-input').value.trim();
+                const bDate = document.getElementById('birth-date-input').value;
+                const gender = document.getElementById('signup-gender-select').value;
+                const district = document.getElementById('signup-district-select').value;
+                const upazila = document.getElementById('signup-upazila-select').value;
 
-                totalCoins = 100;
-                const profileObj = { 
-                    firstName: fName, 
-                    lastName: lName, 
-                    birthDate: bDate, 
-                    gender: gender,
-                    district: district,
-                    upazila: upazila,
-                    password: password,
-                    profilePic: defaultAvatarBase64,
-                    coins: totalCoins
-                };
-                commitToStoredDatabase(rawIdentity, profileObj);
-                currentSessionUser = rawIdentity;
+                // Firebase-এ অটোমেটিক ইউজার রেজিস্ট্রেশন
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        currentSessionUser = email.toLowerCase();
+                        totalCoins = 100;
+
+                        const profileObj = { 
+                            firstName: fName, 
+                            lastName: lName, 
+                            birthDate: bDate, 
+                            gender: gender,
+                            district: district,
+                            upazila: upazila,
+                            profilePic: defaultAvatarBase64,
+                            coins: totalCoins
+                        };
+                        commitToStoredDatabase(currentSessionUser, profileObj);
+
+                        alert("Account created successfully in Firebase!");
+                        loadDashboardUI(fName, lName, bDate, gender, district, upazila, defaultAvatarBase64);
+                    })
+                    .catch((error) => {
+                        alert("Firebase Registration Error: " + error.message);
+                    });
+
             } else {
-                const rawIdentity = document.getElementById('login-identity-input').value.trim().toLowerCase();
+                const email = document.getElementById('login-identity-input').value.trim();
                 const password = document.getElementById('login-password-input').value;
-                const matchedUser = database.find(user => user.uid === rawIdentity);
 
-                if (!matchedUser) {
-                    alert("Login Denied! This user is not registered yet.");
-                    return;
-                }
+                // Firebase-এ অটোমেটিক ইউজার লগইন যাচাই
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        currentSessionUser = email.toLowerCase();
+                        const database = fetchStoredDatabase();
+                        const matchedUser = database.find(user => user.uid === currentSessionUser);
 
-                if (matchedUser.data.password && matchedUser.data.password !== password) {
-                    alert("Incorrect password! Please try again.");
-                    return;
-                }
+                        const fName = matchedUser?.data?.firstName || "User";
+                        const lName = matchedUser?.data?.lastName || "";
+                        const bDate = matchedUser?.data?.birthDate || "Not Provided";
+                        const gender = matchedUser?.data?.gender || "Male";
+                        const district = matchedUser?.data?.district || "Not Set";
+                        const upazila = matchedUser?.data?.upazila || "Not Set";
+                        const loadedAvatar = matchedUser?.data?.profilePic || defaultAvatarBase64;
+                        totalCoins = matchedUser?.data?.coins !== undefined ? matchedUser.data.coins : 100;
 
-                currentSessionUser = rawIdentity;
-                fName = matchedUser.data.firstName || rawIdentity;
-                lName = matchedUser.data.lastName || "";
-                bDate = matchedUser.data.birthDate || "Not Provided";
-                gender = matchedUser.data.gender || "Male";
-                district = matchedUser.data.district || "Not Set";
-                upazila = matchedUser.data.upazila || "Not Set";
-                loadedAvatar = matchedUser.data.profilePic || defaultAvatarBase64;
-                
-                totalCoins = (matchedUser.data.coins !== undefined) ? matchedUser.data.coins : 100;
+                        alert("Log In Successful!");
+                        loadDashboardUI(fName, lName, bDate, gender, district, upazila, loadedAvatar);
+                    })
+                    .catch((error) => {
+                        alert("Firebase Login Error: " + error.message);
+                    });
             }
+        }
 
+        function loadDashboardUI(fName, lName, bDate, gender, district, upazila, loadedAvatar) {
             document.getElementById('welcome-name').innerText = fName + " " + lName;
             document.getElementById('account-first-name').value = fName;
             document.getElementById('account-last-name').value = lName;
@@ -1214,11 +1205,10 @@
 
             totalCoins += 1;
             energyLimit -= 1;
-            tapCounter += 1; // Increment tap counter
+            tapCounter += 1;
 
             syncCoinDisplayLayout();
 
-            // Floating +1 Animation
             const numElement = document.createElement('div');
             numElement.classList.add('floating-num');
             numElement.innerText = '+1';
@@ -1237,11 +1227,8 @@
                 numElement.remove();
             }, 800);
 
-            // ADS TRIGGER AT 20, 40, AND 60 TAPS
             if (tapCounter === 20 || tapCounter === 40 || tapCounter === 60) {
                 triggerSponsoredAd();
-                
-                // Reset counter when reached 60 taps for infinite loop
                 if (tapCounter === 60) {
                     tapCounter = 0;
                 }
@@ -1456,26 +1443,33 @@
         }
 
         function executeSessionLogout() {
-            closeAccountActionModal();
-            currentSessionUser = null;
-            document.getElementById('dashboard-screen').style.display = 'none';
-            document.getElementById('auth-screen').style.display = 'block';
-            alert("Logged out securely.");
+            auth.signOut().then(() => {
+                closeAccountActionModal();
+                currentSessionUser = null;
+                document.getElementById('dashboard-screen').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'block';
+                alert("Logged out securely from Firebase.");
+            });
         }
 
         function executeAccountDeletion() {
             const approval = confirm("Permanently delete your account registration?");
             if(approval) {
-                if (currentSessionUser) {
-                    let database = fetchStoredDatabase();
-                    database = database.filter(user => user.uid !== currentSessionUser);
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
+                const user = auth.currentUser;
+                if (user) {
+                    user.delete().then(() => {
+                        if (currentSessionUser) {
+                            let database = fetchStoredDatabase();
+                            database = database.filter(u => u.uid !== currentSessionUser);
+                            localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
+                        }
+                        closeAccountActionModal();
+                        currentSessionUser = null;
+                        document.getElementById('dashboard-screen').style.display = 'none';
+                        document.getElementById('auth-screen').style.display = 'block';
+                        alert("Your account data was wiped successfully from Firebase.");
+                    }).catch(error => alert("Delete Error: " + error.message));
                 }
-                closeAccountActionModal();
-                currentSessionUser = null;
-                document.getElementById('dashboard-screen').style.display = 'none';
-                document.getElementById('auth-screen').style.display = 'block';
-                alert("Your account data was wiped successfully.");
             }
         }
 
@@ -1504,27 +1498,5 @@
             alert(`Earned +${amount} Coins successfully!`);
         }
     </script>
-<!-- Firebase SDK Module -->
-<script type="module">
-  // CDN Link থেকে Firebase SDK Import
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-
-  // Firebase Configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
-    authDomain: "earningbd-37459.firebaseapp.com",
-    projectId: "earningbd-37459",
-    storageBucket: "earningbd-37459.firebasestorage.app",
-    messagingSenderId: "301820085906",
-    appId: "1:301820085906:web:bfcd774e1ba5f168a0484b",
-    measurementId: "G-7WJL76YJPE"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-
 </body>
 </html>
