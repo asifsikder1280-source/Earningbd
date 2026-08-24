@@ -26,11 +26,11 @@
             user-select: none; 
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent; /* Remove blue overlay on tap */
+            -webkit-tap-highlight-color: transparent;
         }
 
         * {
-            -webkit-tap-highlight-color: transparent; /* Remove blue highlight for all elements */
+            -webkit-tap-highlight-color: transparent;
             outline: none;
         }
 
@@ -303,6 +303,7 @@
             padding: 10px;
             background: radial-gradient(circle, rgba(241,196,15,0.2) 0%, rgba(255,255,255,0) 70%);
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
             outline: none;
         }
 
@@ -730,7 +731,7 @@
                 <h1 style="font-size: 1.1rem; opacity: 0.9;"></h1>
                 <p style="margin:0; font-size:1.3rem; font-weight:bold;"><span id="welcome-name">User</span></p>
                 <div style="margin-top: 5px; font-size: 0.8rem; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 10px;">
-                    🪙 <span id="header-coins">100</span> Coins | <span id="header-level">🥉 Bronze Level</span>
+                    🪙 <span id="header-coins">0</span> Coins | <span id="header-level">🥉 Bronze Level</span>
                 </div>
             </div>
             <div class="header-profile">
@@ -795,7 +796,7 @@
             </div>
         </div>
 
-        <!-- PAYOUT / CASH OUT VIEW (UPDATED FOR REALTIME DATABASE) -->
+        <!-- PAYOUT / CASH OUT VIEW -->
         <div id="view-payment" class="app-view">
             <div class="card">
                 <h2>💸 Cash Out Request (bKash)</h2>
@@ -981,17 +982,17 @@
 
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
-    <!-- FIREBASE COMPAT SDKs (ADDED REALTIME DATABASE) -->
+    <!-- FIREBASE COMPAT SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
-        // FIREBASE CONFIGURATION SETUP WITH DATABASE URL
+        // FIREBASE CONFIGURATION SETUP
         const firebaseConfig = {
             apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
             authDomain: "earningbd-37459.firebaseapp.com",
-            databaseURL: "https://earningbd-37459-default-rtdb.firebaseio.com", // Realtime Database URL
+            databaseURL: "https://earningbd-37459-default-rtdb.firebaseio.com",
             projectId: "earningbd-37459",
             storageBucket: "earningbd-37459.firebasestorage.app",
             messagingSenderId: "301820085906",
@@ -1004,12 +1005,11 @@
         const auth = firebase.auth();
         const rtdb = firebase.database();
 
-        let currentSessionUser = null;
-        let totalCoins = 100;
+        let totalCoins = 0;
         let energyLimit = 500;
         let maxEnergyCapacity = 500;
-        
         let tapCounter = 0;
+        let userDBRef = null;
         
         const defaultAvatarBase64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 
@@ -1047,25 +1047,31 @@
             window.addEventListener('touchend', endImgDrag);
         });
 
-        // AUTHENTICATION STATE OBSERVER (PAGE REFRESH FIX)
+        // AUTHENTICATION STATE OBSERVER WITH REALTIME DATABASE SYNC
         auth.onAuthStateChanged((user) => {
             if (user) {
-                currentSessionUser = user.email.toLowerCase();
-                const database = fetchStoredDatabase();
-                const matchedUser = database.find(u => u.uid === currentSessionUser);
-
-                const fName = matchedUser?.data?.firstName || "User";
-                const lName = matchedUser?.data?.lastName || "";
-                const bDate = matchedUser?.data?.birthDate || "Not Provided";
-                const gender = matchedUser?.data?.gender || "Male";
-                const district = matchedUser?.data?.district || "Not Set";
-                const upazila = matchedUser?.data?.upazila || "Not Set";
-                const loadedAvatar = matchedUser?.data?.profilePic || defaultAvatarBase64;
-                totalCoins = matchedUser?.data?.coins !== undefined ? matchedUser.data.coins : 100;
-
-                loadDashboardUI(fName, lName, bDate, gender, district, upazila, loadedAvatar);
+                userDBRef = rtdb.ref('users/' + user.uid);
+                
+                // Real-time backend listener for balance & profile
+                userDBRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        totalCoins = data.coins !== undefined ? data.coins : 100;
+                        maxEnergyCapacity = data.maxEnergy || 500;
+                        
+                        loadDashboardUI(
+                            data.firstName || "User", 
+                            data.lastName || "", 
+                            data.birthDate || "Not Provided", 
+                            data.gender || "Male", 
+                            data.district || "Not Set", 
+                            data.upazila || "Not Set", 
+                            data.profilePic || defaultAvatarBase64
+                        );
+                    }
+                });
             } else {
-                currentSessionUser = null;
+                if (userDBRef) userDBRef.off();
                 document.getElementById('auth-screen').style.display = 'block';
                 document.getElementById('dashboard-screen').style.display = 'none';
             }
@@ -1086,13 +1092,8 @@
         }
 
         function saveCoinsToDatabase() {
-            if (currentSessionUser) {
-                const database = fetchStoredDatabase();
-                const matchedUser = database.find(user => user.uid === currentSessionUser);
-                if (matchedUser) {
-                    matchedUser.data.coins = totalCoins;
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-                }
+            if (auth.currentUser) {
+                rtdb.ref('users/' + auth.currentUser.uid + '/coins').set(totalCoins);
             }
         }
 
@@ -1103,8 +1104,6 @@
             
             const fillWidth = (energyLimit / maxEnergyCapacity) * 100;
             document.getElementById('energy-progress-bar').style.width = fillWidth + '%';
-
-            saveCoinsToDatabase();
         }
 
         function switchAuthTab(type) {
@@ -1120,24 +1119,6 @@
             }
         }
 
-        function fetchStoredDatabase() {
-            const data = localStorage.getItem('tapbd_users_v2');
-            return data ? JSON.parse(data) : [];
-        }
-
-        function commitToStoredDatabase(identity, profileData) {
-            const database = fetchStoredDatabase();
-            const index = database.findIndex(user => user.uid === identity);
-            
-            if (index !== -1) {
-                database[index].data = profileData;
-            } else {
-                database.push({ uid: identity, data: profileData });
-            }
-            localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-        }
-
-        // FIREBASE AUTHENTICATION integration
         function handleAuthSubmit(event) {
             event.preventDefault();
             const activeFormId = event.target.id;
@@ -1154,10 +1135,7 @@
 
                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
-                        const user = userCredential.user;
-                        currentSessionUser = email.toLowerCase();
-                        totalCoins = 100;
-
+                        const uid = userCredential.user.uid;
                         const profileObj = { 
                             firstName: fName, 
                             lastName: lName, 
@@ -1166,14 +1144,18 @@
                             district: district,
                             upazila: upazila,
                             profilePic: defaultAvatarBase64,
-                            coins: totalCoins
+                            coins: 100,
+                            maxEnergy: 500,
+                            email: email
                         };
-                        commitToStoredDatabase(currentSessionUser, profileObj);
-
-                        alert("Account created successfully in Firebase!");
+                        
+                        return rtdb.ref('users/' + uid).set(profileObj);
+                    })
+                    .then(() => {
+                        alert("Account created successfully!");
                     })
                     .catch((error) => {
-                        alert("Firebase Registration Error: " + error.message);
+                        alert("Registration Error: " + error.message);
                     });
 
             } else {
@@ -1181,11 +1163,8 @@
                 const password = document.getElementById('login-password-input').value;
 
                 auth.signInWithEmailAndPassword(email, password)
-                    .then(() => {
-                        alert("Log In Successful!");
-                    })
                     .catch((error) => {
-                        alert("Firebase Login Error: " + error.message);
+                        alert("Login Error: " + error.message);
                     });
             }
         }
@@ -1208,31 +1187,29 @@
             document.getElementById('dashboard-screen').style.display = 'block';
         }
 
-        // CASH OUT REQUEST HANDLING (FIREBASE REALTIME DATABASE)
         function handleCashOutSubmit(event) {
             event.preventDefault();
 
             const user = auth.currentUser;
             if (!user) {
-                alert("অনুগ্রহ করে প্রথমে লগইন করুন!");
+                alert("Please log in first!");
                 return;
             }
 
             const bkashNumber = document.getElementById('cashout-bkash-number').value.trim();
             const amountBDT = parseFloat(document.getElementById('cashout-bdt-amount').value);
-            const requiredCoins = amountBDT * 10; // ১০০০ কয়েন = ১০০ টাকা (১ টাকা = ১০ কয়েন)
+            const requiredCoins = amountBDT * 10;
 
             if (amountBDT < 100) {
-                alert("সর্বনিম্ন উত্তোলন ১০০ টাকা!");
+                alert("Minimum withdrawal is 100 BDT!");
                 return;
             }
 
             if (totalCoins < requiredCoins) {
-                alert(`আপনার পর্যাপ্ত Coins নেই! ${amountBDT} টাকার জন্য ${requiredCoins} Coins প্রয়োজন। আপনার আছে: ${totalCoins} Coins`);
+                alert(`Insufficient coins! Required: ${requiredCoins} Coins. Available: ${totalCoins} Coins`);
                 return;
             }
 
-            // Realtime Database-এ রিকোয়েস্ট তৈরি করা
             const newRequestRef = rtdb.ref("cashout_requests").push();
 
             const cashoutData = {
@@ -1250,17 +1227,16 @@
 
             newRequestRef.set(cashoutData)
                 .then(() => {
-                    // ইউজারের কয়েন কেটে নেওয়া এবং UI আপডেট
                     totalCoins -= requiredCoins;
+                    saveCoinsToDatabase();
                     syncCoinDisplayLayout();
 
-                    alert("আপনার ক্যাশ আউট রিকোয়েস্ট সফলভাবে জমা হয়েছে!");
+                    alert("Cash out request submitted successfully!");
                     document.getElementById('cashout-bkash-number').value = "";
                     document.getElementById('cashout-bdt-amount').value = "";
                 })
                 .catch((error) => {
-                    console.error("Error submitting cashout: ", error);
-                    alert("রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে: " + error.message);
+                    alert("Submission error: " + error.message);
                 });
         }
 
@@ -1275,6 +1251,7 @@
             tapCounter += 1;
 
             syncCoinDisplayLayout();
+            saveCoinsToDatabase();
 
             const numElement = document.createElement('div');
             numElement.classList.add('floating-num');
@@ -1442,17 +1419,12 @@
             document.getElementById('global-header-avatar').src = finalizedImgDataUrl;
             document.getElementById('account-view-avatar').src = finalizedImgDataUrl;
 
-            if (currentSessionUser) {
-                const database = fetchStoredDatabase();
-                const currentMatchedRecord = database.find(user => user.uid === currentSessionUser);
-                if (currentMatchedRecord) {
-                    currentMatchedRecord.data.profilePic = finalizedImgDataUrl;
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-                }
+            if (auth.currentUser) {
+                rtdb.ref('users/' + auth.currentUser.uid + '/profilePic').set(finalizedImgDataUrl);
             }
 
             closeSquareCropper();
-            alert("Profile picture saved into database permanently!");
+            alert("Profile picture updated!");
         }
 
         function openTankRefillModal() {
@@ -1465,23 +1437,24 @@
 
         function purchaseTankBoost(tapsAmount, costCoins) {
             if (totalCoins < costCoins) {
-                alert("Insufficient wallet balance for this booster package purchase!");
+                alert("Insufficient wallet balance!");
                 return;
             }
             if (energyLimit + tapsAmount > maxEnergyCapacity) {
-                alert(`Cannot exceed active ceiling limit! Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
+                alert(`Cannot exceed active energy ceiling limit! Maximum allowance left: ${maxEnergyCapacity - energyLimit} taps.`);
                 return;
             }
 
             totalCoins -= costCoins;
             energyLimit += tapsAmount;
+            saveCoinsToDatabase();
             syncCoinDisplayLayout();
-            alert(`Success! Loaded +${tapsAmount} energy taps.`);
+            alert(`Success! Refilled +${tapsAmount} energy taps.`);
         }
 
         function upgradeMaxEnergyLimit() {
             if (totalCoins < 5000) {
-                alert("Permanent structural expansion requires 5,000 coins.");
+                alert("Permanent upgrade requires 5,000 coins.");
                 return;
             }
             if (maxEnergyCapacity === 1000) {
@@ -1492,13 +1465,21 @@
             totalCoins -= 5000;
             maxEnergyCapacity = 1000;
             energyLimit = 1000; 
+            
+            if (auth.currentUser) {
+                rtdb.ref('users/' + auth.currentUser.uid).update({
+                    coins: totalCoins,
+                    maxEnergy: 1000
+                });
+            }
+
             syncCoinDisplayLayout();
             
             const upgradeBtn = document.getElementById('max-upgrade-btn');
             upgradeBtn.innerText = "Maxed";
             upgradeBtn.disabled = true;
 
-            alert("Energy tank capacity limit expanded to 1,000 taps!");
+            alert("Energy tank capacity expanded to 1,000 taps!");
         }
 
         function openAccountActionModal() {
@@ -1512,23 +1493,20 @@
         function executeSessionLogout() {
             auth.signOut().then(() => {
                 closeAccountActionModal();
-                alert("Logged out securely from Firebase.");
             });
         }
 
         function executeAccountDeletion() {
-            const approval = confirm("Permanently delete your account registration?");
-            if(approval) {
+            const approval = confirm("Permanently delete your account?");
+            if (approval) {
                 const user = auth.currentUser;
                 if (user) {
+                    const uid = user.uid;
                     user.delete().then(() => {
-                        if (currentSessionUser) {
-                            let database = fetchStoredDatabase();
-                            database = database.filter(u => u.uid !== currentSessionUser);
-                            localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-                        }
+                        return rtdb.ref('users/' + uid).remove();
+                    }).then(() => {
                         closeAccountActionModal();
-                        alert("Your account data was wiped successfully from Firebase.");
+                        alert("Your account was successfully deleted.");
                     }).catch(error => alert("Delete Error: " + error.message));
                 }
             }
@@ -1549,14 +1527,16 @@
         function closeAdModal() {
             document.getElementById('adModal').classList.add('hidden');
             totalCoins += 50;
+            saveCoinsToDatabase();
             syncCoinDisplayLayout();
             alert("Ad finished! You earned +50 bonus coins!");
         }
 
         function addCoins(amount) {
             totalCoins += amount;
+            saveCoinsToDatabase();
             syncCoinDisplayLayout();
-            alert(`Earned +${amount} Coins successfully!`);
+            alert(`Earned +${amount} Coins!`);
         }
     </script>
 </body>
