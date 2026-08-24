@@ -800,7 +800,7 @@
         <div id="view-payment" class="app-view">
             <div class="card">
                 <h2>💸 Cash Out Request (bKash)</h2>
-                <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
+                <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০,০০০ কয়েন = ১০০ টাকা)</div>
                 <form onsubmit="handleCashOutSubmit(event)">
                     <div class="form-group">
                         <label>bKash Mobile Number</label>
@@ -1198,7 +1198,9 @@
 
             const bkashNumber = document.getElementById('cashout-bkash-number').value.trim();
             const amountBDT = parseFloat(document.getElementById('cashout-bdt-amount').value);
-            const requiredCoins = amountBDT * 10;
+            
+            // Updated conversion rate: 10,000 coins = 100 Taka (100 coins per Taka)
+            const requiredCoins = amountBDT * 100;
 
             if (amountBDT < 100) {
                 alert("Minimum withdrawal is 100 BDT!");
@@ -1507,7 +1509,7 @@
                     }).then(() => {
                         closeAccountActionModal();
                         alert("Your account was successfully deleted.");
-                    }).catch(error => alert("Delete Error: " + error.message));
+                    }).catch(error => alert("Delete Error: " + error.message);
                 }
             }
         }
