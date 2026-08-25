@@ -1173,8 +1173,14 @@
                 document.getElementById('admin-ad-link').value = savedTasks.adLink || "";
                 document.getElementById('admin-checkin-link').value = savedTasks.checkinLink || "";
                 document.getElementById('admin-social-link').value = savedTasks.socialLink || "";
-                document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
-                document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
+                
+                // FIXED: Populating Giant Coin and Sponsored inputs in Admin Panel
+                if(document.getElementById('admin-giant-coin-link')) {
+                    document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
+                }
+                if(document.getElementById('admin-sponsored-link')) {
+                    document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
+                }
             }
 
             const container = document.getElementById('task-list-container');
