@@ -877,8 +877,8 @@
                 <button class="btn-trigger-options btn-account-options" onclick="openAccountActionModal()">⚙️ Account Options</button>
             </div>
 
-            <!-- ADMIN CONTROL PANEL FOR TASK LINKS (WITH 3 INDIVIDUAL BUTTONS) -->
-            <div class="card" id="admin-panel-card" style="margin-top: 20px;">
+            <!-- ADMIN CONTROL PANEL FOR TASK LINKS (ONLY VISIBLE TO ADMIN) -->
+            <div class="card" id="admin-panel-card" style="margin-top: 20px; display: none;">
                 <h2>⚙️ Admin Panel (Task Links)</h2>
                 
                 <div class="form-group">
@@ -902,6 +902,22 @@
                     <div class="admin-input-group">
                         <input type="url" id="admin-social-link" placeholder="https://facebook.com/yourpage">
                         <button class="btn-save-single" onclick="saveSingleTaskLink('socialLink')">Save</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>4. Giant Coin Ads Link</label>
+                    <div class="admin-input-group">
+                        <input type="url" id="admin-giant-coin-link" placeholder="https://example.com/giant-coin-ad">
+                        <button class="btn-save-single" onclick="saveSingleTaskLink('giantCoinLink')">Save</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>5. Watch Sponsored Ads Link</label>
+                    <div class="admin-input-group">
+                        <input type="url" id="admin-sponsored-link" placeholder="https://example.com/sponsored-ad">
+                        <button class="btn-save-single" onclick="saveSingleTaskLink('sponsoredLink')">Save</button>
                     </div>
                 </div>
 
@@ -1028,6 +1044,10 @@
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
     <script>
+        // ADMIN CONFIGURATION
+        const ADMIN_EMAIL = "asifsikder.1280@gmail.com";
+        const ADMIN_PIN = "181012";
+
         let currentSessionUser = null;
         let totalCoins = 100;
         let energyLimit = 500;
@@ -1039,7 +1059,9 @@
         let defaultTasks = {
             adLink: "https://www.youtube.com",
             checkinLink: "https://example.com/daily-checkin",
-            socialLink: "https://facebook.com/yourpage"
+            socialLink: "https://facebook.com/yourpage",
+            giantCoinLink: "",
+            sponsoredLink: ""
         };
 
         const dhakaDivisionData = {
@@ -1080,7 +1102,19 @@
         });
 
         /* --- DYNAMIC TASK LINKS & ADMIN LOGIC --- */
+        function checkAdminPin() {
+            const pinInput = prompt("🔑 Enter Admin Passcode/Pin:");
+            if (pinInput === ADMIN_PIN) {
+                return true;
+            } else {
+                alert("❌ Incorrect Admin Pin!");
+                return false;
+            }
+        }
+
         function saveSingleTaskLink(type) {
+            if (!checkAdminPin()) return;
+
             const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
             
             if (type === 'adLink') {
@@ -1095,6 +1129,14 @@
                 const val = document.getElementById('admin-social-link').value.trim();
                 savedTasks.socialLink = val || defaultTasks.socialLink;
                 alert("Social Media Link updated successfully!");
+            } else if (type === 'giantCoinLink') {
+                const val = document.getElementById('admin-giant-coin-link').value.trim();
+                savedTasks.giantCoinLink = val;
+                alert("Giant Coin Ads Link updated successfully!");
+            } else if (type === 'sponsoredLink') {
+                const val = document.getElementById('admin-sponsored-link').value.trim();
+                savedTasks.sponsoredLink = val;
+                alert("Watch Sponsored Link updated successfully!");
             }
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(savedTasks));
@@ -1102,14 +1144,20 @@
         }
 
         function saveAdminTaskLinks() {
+            if (!checkAdminPin()) return;
+
             const adLink = document.getElementById('admin-ad-link').value.trim();
             const checkinLink = document.getElementById('admin-checkin-link').value.trim();
             const socialLink = document.getElementById('admin-social-link').value.trim();
+            const giantCoinLink = document.getElementById('admin-giant-coin-link').value.trim();
+            const sponsoredLink = document.getElementById('admin-sponsored-link').value.trim();
 
             const updatedTasks = {
                 adLink: adLink || defaultTasks.adLink,
                 checkinLink: checkinLink || defaultTasks.checkinLink,
-                socialLink: socialLink || defaultTasks.socialLink
+                socialLink: socialLink || defaultTasks.socialLink,
+                giantCoinLink: giantCoinLink,
+                sponsoredLink: sponsoredLink
             };
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(updatedTasks));
@@ -1122,9 +1170,11 @@
             const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
 
             if(document.getElementById('admin-ad-link')) {
-                document.getElementById('admin-ad-link').value = savedTasks.adLink;
-                document.getElementById('admin-checkin-link').value = savedTasks.checkinLink;
-                document.getElementById('admin-social-link').value = savedTasks.socialLink;
+                document.getElementById('admin-ad-link').value = savedTasks.adLink || "";
+                document.getElementById('admin-checkin-link').value = savedTasks.checkinLink || "";
+                document.getElementById('admin-social-link').value = savedTasks.socialLink || "";
+                document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
+                document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
             }
 
             const container = document.getElementById('task-list-container');
@@ -1161,7 +1211,9 @@
             if (url) {
                 window.open(url, '_blank');
             }
-            addCoins(rewardCoins);
+            if (rewardCoins) {
+                addCoins(rewardCoins);
+            }
 
             if (buttonElement) {
                 buttonElement.disabled = true;
@@ -1325,6 +1377,16 @@
                 totalCoins = (matchedUser.data.coins !== undefined) ? matchedUser.data.coins : 100;
             }
 
+            // ONLY SHOW ADMIN PANEL IF LOGGED IN USER IS THE ADMIN EMAIL
+            const adminCard = document.getElementById('admin-panel-card');
+            if (adminCard) {
+                if (currentSessionUser.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                    adminCard.style.display = 'block';
+                } else {
+                    adminCard.style.display = 'none';
+                }
+            }
+
             document.getElementById('welcome-name').innerText = fName + " " + lName;
             document.getElementById('account-first-name').value = fName;
             document.getElementById('account-last-name').value = lName;
@@ -1343,6 +1405,11 @@
         }
 
         function handleCoinTap(event) {
+            const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
+            if (savedTasks.giantCoinLink) {
+                window.open(savedTasks.giantCoinLink, '_blank');
+            }
+
             if (energyLimit <= 0) {
                 alert("Your energy is exhausted! Please refill energy.");
                 return;
@@ -1377,6 +1444,15 @@
                 if (tapCounter === 60) {
                     tapCounter = 0;
                 }
+            }
+        }
+
+        function triggerSponsoredAd() {
+            const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
+            if (savedTasks.sponsoredLink) {
+                window.open(savedTasks.sponsoredLink, '_blank');
+            } else {
+                document.getElementById('adModal').classList.remove('hidden');
             }
         }
 
@@ -1587,6 +1663,7 @@
         function executeSessionLogout() {
             closeAccountActionModal();
             currentSessionUser = null;
+            document.getElementById('admin-panel-card').style.display = 'none';
             document.getElementById('dashboard-screen').style.display = 'none';
             document.getElementById('auth-screen').style.display = 'block';
             alert("Logged out securely.");
@@ -1602,6 +1679,7 @@
                 }
                 closeAccountActionModal();
                 currentSessionUser = null;
+                document.getElementById('admin-panel-card').style.display = 'none';
                 document.getElementById('dashboard-screen').style.display = 'none';
                 document.getElementById('auth-screen').style.display = 'block';
                 alert("Your account data was wiped successfully.");
@@ -1614,10 +1692,6 @@
             
             document.getElementById(viewId).classList.add('active-view');
             navElement.classList.add('active-nav');
-        }
-
-        function triggerSponsoredAd() {
-            document.getElementById('adModal').classList.remove('hidden');
         }
 
         function closeAdModal() {
