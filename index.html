@@ -1174,7 +1174,6 @@
                 document.getElementById('admin-checkin-link').value = savedTasks.checkinLink || "";
                 document.getElementById('admin-social-link').value = savedTasks.socialLink || "";
                 
-                // FIXED: Populating Giant Coin and Sponsored inputs in Admin Panel
                 if(document.getElementById('admin-giant-coin-link')) {
                     document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
                 }
@@ -1383,7 +1382,6 @@
                 totalCoins = (matchedUser.data.coins !== undefined) ? matchedUser.data.coins : 100;
             }
 
-            // ONLY SHOW ADMIN PANEL IF LOGGED IN USER IS THE ADMIN EMAIL
             const adminCard = document.getElementById('admin-panel-card');
             if (adminCard) {
                 if (currentSessionUser.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
@@ -1410,12 +1408,8 @@
             document.getElementById('dashboard-screen').style.display = 'block';
         }
 
+        // FIXED: Giant Coin Link triggers at every 20 taps (20, 40, 60, 80, 100...)
         function handleCoinTap(event) {
-            const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
-            if (savedTasks.giantCoinLink) {
-                window.open(savedTasks.giantCoinLink, '_blank');
-            }
-
             if (energyLimit <= 0) {
                 alert("Your energy is exhausted! Please refill energy.");
                 return;
@@ -1445,10 +1439,13 @@
                 numElement.remove();
             }, 800);
 
-            if (tapCounter === 20 || tapCounter === 40 || tapCounter === 60) {
-                triggerSponsoredAd();
-                if (tapCounter === 60) {
-                    tapCounter = 0;
+            // Opens link every 20 taps
+            if (tapCounter % 20 === 0) {
+                const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
+                if (savedTasks.giantCoinLink) {
+                    window.open(savedTasks.giantCoinLink, '_blank');
+                } else {
+                    triggerSponsoredAd();
                 }
             }
         }
