@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TapBD</title>
+
+    <!-- Firebase SDK (Version 8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         :root {
             --primary-color: #e2136e; /* bKash Pink */
@@ -809,19 +815,19 @@
             </div>
         </div>
 
-        <!-- PAYOUT VIEW -->
+        <!-- PAYOUT VIEW (UPDATED FOR FIREBASE CASHOUT) -->
         <div id="view-payment" class="app-view">
             <div class="card">
                 <h2>💸 Cash Out Request (bKash)</h2>
                 <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
-                <form onsubmit="event.preventDefault(); alert('Withdrawal processing securely!');">
+                <form id="cashout-form" onsubmit="handleCashOutSubmit(event)">
                     <div class="form-group">
                         <label>bKash Mobile Number</label>
-                        <input type="tel" placeholder="Enter bKash Number" required>
+                        <input type="tel" id="cashout-number" placeholder="Enter bKash Number" required>
                     </div>
                     <div class="form-group">
                         <label>Amount (BDT)</label>
-                        <input type="number" min="100" placeholder="Minimum 100 TK" required>
+                        <input type="number" id="cashout-amount" min="100" placeholder="Minimum 100 TK" required>
                     </div>
                     <button type="submit" class="btn">Submit Cash Out</button>
                 </form>
@@ -1044,6 +1050,46 @@
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
     <script>
+        // ----------------------------------------------------
+        // 1. FIREBASE CONFIGURATION (এখানকার তথ্য পরিবর্তন করুন)
+        // ----------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        // ----------------------------------------------------
+        // 2. AUTOMATIC LOGIN LISTENER (অটোমেটিক লগইন ধরে রাখার জন্য)
+        // ----------------------------------------------------
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // ইউজার অটোমেটিক লগইন থাকলে Firebase থেকে তথ্য ফেচ করা
+                currentSessionUser = user.uid;
+                database.ref('users/' + user.uid).once('value').then((snapshot) => {
+                    const userData = snapshot.val();
+                    if (userData) {
+                        setupDashboardUI(userData);
+                    }
+                });
+            } else {
+                // লগইন না থাকলে Auth Screen দেখানো
+                document.getElementById('auth-screen').style.display = 'block';
+                document.getElementById('dashboard-screen').style.display = 'none';
+            }
+        });
+
         // ADMIN CONFIGURATION
         const ADMIN_EMAIL = "asifsikder.1280@gmail.com";
         const ADMIN_PIN = "181012";
@@ -1101,15 +1147,57 @@
             window.addEventListener('touchend', endImgDrag);
         });
 
+        // ----------------------------------------------------
+        // 3. CASHOUT REQUEST TO FIREBASE (ক্যাশ আউট জমা দেওয়া)
+        // ----------------------------------------------------
+        function handleCashOutSubmit(event) {
+            event.preventDefault();
+            
+            const number = document.getElementById('cashout-number').value.trim();
+            const amount = parseInt(document.getElementById('cashout-amount').value);
+            const requiredCoins = amount * 10; // ১০০০ কয়েন = ১০০ টাকা
+
+            if (totalCoins < requiredCoins) {
+                alert(`Insufficient Coins! You need at least ${requiredCoins} coins to withdraw ${amount} TK.`);
+                return;
+            }
+
+            const currentUser = auth.currentUser;
+            const userId = currentUser ? currentUser.uid : currentSessionUser;
+
+            if (!userId) {
+                alert("Please log in first!");
+                return;
+            }
+
+            // Firebase Realtime Database-এ Cashout Request পাঠানোর প্রসেস
+            const requestRef = database.ref('cashout_requests');
+            const newRequestRef = requestRef.push();
+            
+            newRequestRef.set({
+                userId: userId,
+                number: number,
+                amount: amount,
+                status: "Pending",
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            })
+            .then(() => {
+                // কয়েন কেটে নেওয়ার আপডেট
+                totalCoins -= requiredCoins;
+                syncCoinDisplayLayout();
+                
+                alert("Withdrawal Request Submitted Successfully to Firebase!");
+                document.getElementById('cashout-form').reset();
+            })
+            .catch((error) => {
+                alert("Error submitting request: " + error.message);
+            });
+        }
+
         /* --- DYNAMIC TASK LINKS & ADMIN LOGIC --- */
         function checkAdminPin() {
             const pinInput = prompt("🔑 Enter Admin Passcode/Pin:");
-            if (pinInput === ADMIN_PIN) {
-                return true;
-            } else {
-                alert("❌ Incorrect Admin Pin!");
-                return false;
-            }
+            return pinInput === ADMIN_PIN;
         }
 
         function saveSingleTaskLink(type) {
@@ -1120,49 +1208,38 @@
             if (type === 'adLink') {
                 const val = document.getElementById('admin-ad-link').value.trim();
                 savedTasks.adLink = val || defaultTasks.adLink;
-                alert("Watch Ads Link updated successfully!");
             } else if (type === 'checkinLink') {
                 const val = document.getElementById('admin-checkin-link').value.trim();
                 savedTasks.checkinLink = val || defaultTasks.checkinLink;
-                alert("Daily Check-in Link updated successfully!");
             } else if (type === 'socialLink') {
                 const val = document.getElementById('admin-social-link').value.trim();
                 savedTasks.socialLink = val || defaultTasks.socialLink;
-                alert("Social Media Link updated successfully!");
             } else if (type === 'giantCoinLink') {
                 const val = document.getElementById('admin-giant-coin-link').value.trim();
                 savedTasks.giantCoinLink = val;
-                alert("Giant Coin Ads Link updated successfully!");
             } else if (type === 'sponsoredLink') {
                 const val = document.getElementById('admin-sponsored-link').value.trim();
                 savedTasks.sponsoredLink = val;
-                alert("Watch Sponsored Link updated successfully!");
             }
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(savedTasks));
             loadTaskLinksToUI();
+            alert("Updated successfully!");
         }
 
         function saveAdminTaskLinks() {
             if (!checkAdminPin()) return;
 
-            const adLink = document.getElementById('admin-ad-link').value.trim();
-            const checkinLink = document.getElementById('admin-checkin-link').value.trim();
-            const socialLink = document.getElementById('admin-social-link').value.trim();
-            const giantCoinLink = document.getElementById('admin-giant-coin-link').value.trim();
-            const sponsoredLink = document.getElementById('admin-sponsored-link').value.trim();
-
             const updatedTasks = {
-                adLink: adLink || defaultTasks.adLink,
-                checkinLink: checkinLink || defaultTasks.checkinLink,
-                socialLink: socialLink || defaultTasks.socialLink,
-                giantCoinLink: giantCoinLink,
-                sponsoredLink: sponsoredLink
+                adLink: document.getElementById('admin-ad-link').value.trim() || defaultTasks.adLink,
+                checkinLink: document.getElementById('admin-checkin-link').value.trim() || defaultTasks.checkinLink,
+                socialLink: document.getElementById('admin-social-link').value.trim() || defaultTasks.socialLink,
+                giantCoinLink: document.getElementById('admin-giant-coin-link').value.trim(),
+                sponsoredLink: document.getElementById('admin-sponsored-link').value.trim()
             };
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(updatedTasks));
             alert("All admin task links saved successfully!");
-            
             loadTaskLinksToUI();
         }
 
@@ -1173,13 +1250,8 @@
                 document.getElementById('admin-ad-link').value = savedTasks.adLink || "";
                 document.getElementById('admin-checkin-link').value = savedTasks.checkinLink || "";
                 document.getElementById('admin-social-link').value = savedTasks.socialLink || "";
-                
-                if(document.getElementById('admin-giant-coin-link')) {
-                    document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
-                }
-                if(document.getElementById('admin-sponsored-link')) {
-                    document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
-                }
+                if(document.getElementById('admin-giant-coin-link')) document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
+                if(document.getElementById('admin-sponsored-link')) document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
             }
 
             const container = document.getElementById('task-list-container');
@@ -1193,15 +1265,13 @@
                     </div>
                     <button class="btn-task" onclick="openTaskLink('${savedTasks.adLink}', 500)">Watch</button>
                 </div>
-
                 <div class="task-item">
                     <div class="task-info">
                         <h4>Daily Check-in</h4>
                         <span>+1000 Coins</span>
                     </div>
-                    <button class="btn-task" id="daily-checkin-btn" onclick="openTaskLink('${savedTasks.checkinLink}', 1000, this)">Claim</button>
+                    <button class="btn-task" onclick="openTaskLink('${savedTasks.checkinLink}', 1000, this)">Claim</button>
                 </div>
-
                 <div class="task-item">
                     <div class="task-info">
                         <h4>Social Media Follow</h4>
@@ -1213,12 +1283,8 @@
         }
 
         function openTaskLink(url, rewardCoins, buttonElement = null) {
-            if (url) {
-                window.open(url, '_blank');
-            }
-            if (rewardCoins) {
-                addCoins(rewardCoins);
-            }
+            if (url) window.open(url, '_blank');
+            if (rewardCoins) addCoins(rewardCoins);
 
             if (buttonElement) {
                 buttonElement.disabled = true;
@@ -1227,7 +1293,6 @@
             }
         }
 
-        /* --- OTHER SYSTEM LOGIC --- */
         function populateUpazilaOptions(selectedDistrict, upazilaSelectId) {
             const upazilaDropdown = document.getElementById(upazilaSelectId);
             upazilaDropdown.innerHTML = '<option value="">Select Upazila</option>';
@@ -1244,12 +1309,9 @@
 
         function saveCoinsToDatabase() {
             if (currentSessionUser) {
-                const database = fetchStoredDatabase();
-                const matchedUser = database.find(user => user.uid === currentSessionUser);
-                if (matchedUser) {
-                    matchedUser.data.coins = totalCoins;
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-                }
+                database.ref('users/' + currentSessionUser).update({
+                    coins: totalCoins
+                });
             }
         }
 
@@ -1286,119 +1348,92 @@
                 targetLabel.innerText = "Bangladeshi Mobile Number";
                 targetInput.placeholder = "e.g. 01712345678";
                 targetInput.type = "text";
-                targetInput.setAttribute("pattern", "^01[3-9]\\d{8}$");
             } else {
                 targetLabel.innerText = "Gmail Address";
                 targetInput.placeholder = "username@gmail.com";
                 targetInput.type = "text";
-                targetInput.setAttribute("pattern", "^[a-zA-Z0-9._%+-]+@gmail\\.com$");
             }
-        }
-
-        function fetchStoredDatabase() {
-            const data = localStorage.getItem('tapbd_users_v2');
-            return data ? JSON.parse(data) : [];
-        }
-
-        function commitToStoredDatabase(identity, profileData) {
-            const database = fetchStoredDatabase();
-            const index = database.findIndex(user => user.uid === identity);
-            
-            if (index !== -1) {
-                database[index].data = profileData;
-            } else {
-                database.push({ uid: identity, data: profileData });
-            }
-            localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
         }
 
         function handleAuthSubmit(event) {
             event.preventDefault();
             const activeFormId = event.target.id;
-            const database = fetchStoredDatabase();
-
-            let fName = "User";
-            let lName = "";
-            let bDate = "Not Provided";
-            let gender = "Male";
-            let district = "Not Set";
-            let upazila = "Not Set";
-            let loadedAvatar = defaultAvatarBase64;
 
             if (activeFormId === 'signup-form') {
                 const rawIdentity = document.getElementById('signup-contact-input').value.trim().toLowerCase();
                 const password = document.getElementById('signup-password-input').value;
-                fName = document.getElementById('first-name-input').value.trim();
-                lName = document.getElementById('last-name-input').value.trim();
-                bDate = document.getElementById('birth-date-input').value;
-                gender = document.getElementById('signup-gender-select').value;
-                district = document.getElementById('signup-district-select').value;
-                upazila = document.getElementById('signup-upazila-select').value;
-                
-                const exists = database.some(user => user.uid === rawIdentity);
-                if (exists) {
-                    alert("This user is already registered.");
-                    return;
-                }
+                const email = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tempbd.com`;
 
-                totalCoins = 100;
-                const profileObj = { 
-                    firstName: fName, 
-                    lastName: lName, 
-                    birthDate: bDate, 
-                    gender: gender,
-                    district: district,
-                    upazila: upazila,
-                    password: password,
-                    profilePic: defaultAvatarBase64,
-                    coins: totalCoins
-                };
-                commitToStoredDatabase(rawIdentity, profileObj);
-                currentSessionUser = rawIdentity;
+                // Firebase Authentication - Sign Up
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        currentSessionUser = user.uid;
+
+                        const profileObj = { 
+                            firstName: document.getElementById('first-name-input').value.trim(), 
+                            lastName: document.getElementById('last-name-input').value.trim(), 
+                            birthDate: document.getElementById('birth-date-input').value, 
+                            gender: document.getElementById('signup-gender-select').value,
+                            district: document.getElementById('signup-district-select').value,
+                            upazila: document.getElementById('signup-upazila-select').value,
+                            profilePic: defaultAvatarBase64,
+                            coins: 100
+                        };
+
+                        return database.ref('users/' + user.uid).set(profileObj).then(() => profileObj);
+                    })
+                    .then((profileObj) => {
+                        setupDashboardUI(profileObj);
+                    })
+                    .catch((error) => {
+                        alert("Sign Up Error: " + error.message);
+                    });
             } else {
                 const rawIdentity = document.getElementById('login-identity-input').value.trim().toLowerCase();
                 const password = document.getElementById('login-password-input').value;
-                const matchedUser = database.find(user => user.uid === rawIdentity);
+                const email = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tempbd.com`;
 
-                if (!matchedUser) {
-                    alert("Login Denied! This user is not registered yet.");
-                    return;
-                }
+                // Firebase Authentication - Log In
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        currentSessionUser = user.uid;
 
-                if (matchedUser.data.password && matchedUser.data.password !== password) {
-                    alert("Incorrect password! Please try again.");
-                    return;
-                }
-
-                currentSessionUser = rawIdentity;
-                fName = matchedUser.data.firstName || rawIdentity;
-                lName = matchedUser.data.lastName || "";
-                bDate = matchedUser.data.birthDate || "Not Provided";
-                gender = matchedUser.data.gender || "Male";
-                district = matchedUser.data.district || "Not Set";
-                upazila = matchedUser.data.upazila || "Not Set";
-                loadedAvatar = matchedUser.data.profilePic || defaultAvatarBase64;
-                
-                totalCoins = (matchedUser.data.coins !== undefined) ? matchedUser.data.coins : 100;
+                        return database.ref('users/' + user.uid).once('value');
+                    })
+                    .then((snapshot) => {
+                        const userData = snapshot.val();
+                        if (userData) {
+                            setupDashboardUI(userData);
+                        }
+                    })
+                    .catch((error) => {
+                        alert("Login Error: " + error.message);
+                    });
             }
+        }
+
+        function setupDashboardUI(userData) {
+            const fName = userData.firstName || "User";
+            const lName = userData.lastName || "";
+            
+            totalCoins = userData.coins !== undefined ? userData.coins : 100;
 
             const adminCard = document.getElementById('admin-panel-card');
             if (adminCard) {
-                if (currentSessionUser.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-                    adminCard.style.display = 'block';
-                } else {
-                    adminCard.style.display = 'none';
-                }
+                adminCard.style.display = (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) ? 'block' : 'none';
             }
 
             document.getElementById('welcome-name').innerText = fName + " " + lName;
             document.getElementById('account-first-name').value = fName;
             document.getElementById('account-last-name').value = lName;
-            document.getElementById('account-birth-date').value = bDate;
-            document.getElementById('account-gender').value = gender;
-            document.getElementById('account-district').value = district;
-            document.getElementById('account-upazila').value = upazila;
+            document.getElementById('account-birth-date').value = userData.birthDate || "Not Provided";
+            document.getElementById('account-gender').value = userData.gender || "Male";
+            document.getElementById('account-district').value = userData.district || "Not Set";
+            document.getElementById('account-upazila').value = userData.upazila || "Not Set";
             
+            const loadedAvatar = userData.profilePic || defaultAvatarBase64;
             document.getElementById('global-header-avatar').src = loadedAvatar;
             document.getElementById('account-view-avatar').src = loadedAvatar;
 
@@ -1408,7 +1443,6 @@
             document.getElementById('dashboard-screen').style.display = 'block';
         }
 
-        // FIXED: Giant Coin Link triggers at every 20 taps (20, 40, 60, 80, 100...)
         function handleCoinTap(event) {
             if (energyLimit <= 0) {
                 alert("Your energy is exhausted! Please refill energy.");
@@ -1435,11 +1469,8 @@
 
             wrapper.appendChild(numElement);
 
-            setTimeout(() => {
-                numElement.remove();
-            }, 800);
+            setTimeout(() => { numElement.remove(); }, 800);
 
-            // Opens link every 20 taps
             if (tapCounter % 20 === 0) {
                 const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
                 if (savedTasks.giantCoinLink) {
@@ -1494,9 +1525,7 @@
         }
 
         function resetCropMatrix() {
-            imgX = 0;
-            imgY = 0;
-            scaleFactor = 1;
+            imgX = 0; imgY = 0; scaleFactor = 1;
             document.getElementById('fb-zoom-slider').value = 1;
             updateCropPositionMatrix();
         }
@@ -1512,24 +1541,19 @@
         }
 
         function nudgeImage(dx, dy) {
-            imgX += dx;
-            imgY += dy;
+            imgX += dx; imgY += dy;
             updateCropPositionMatrix();
         }
 
         function startImgDrag(e) {
             isDragging = true;
             if (e.touches && e.touches.length === 2) {
-                startTouchDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                startTouchDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 baseScaleOnTouchStart = scaleFactor;
             } else {
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                startX = clientX - imgX;
-                startY = clientY - imgY;
+                startX = clientX - imgX; startY = clientY - imgY;
             }
         }
 
@@ -1538,11 +1562,7 @@
 
             if (e.touches && e.touches.length === 2) {
                 e.preventDefault(); 
-                const currentDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                
+                const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 if (startTouchDistance > 0) {
                     let newScale = baseScaleOnTouchStart * (currentDistance / startTouchDistance);
                     newScale = Math.max(1, Math.min(4, newScale));
@@ -1553,16 +1573,12 @@
             } else {
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                imgX = clientX - startX;
-                imgY = clientY - startY;
+                imgX = clientX - startX; imgY = clientY - startY;
                 updateCropPositionMatrix();
             }
         }
 
-        function endImgDrag() {
-            isDragging = false;
-            startTouchDistance = 0;
-        }
+        function endImgDrag() { isDragging = false; startTouchDistance = 0; }
 
         function closeSquareCropper() {
             document.getElementById('fbCropperModal').classList.add('hidden');
@@ -1583,47 +1599,33 @@
 
             const sourceX = (initialDisplayWidth / 2 - imgX - extractWidthOnDisplay / 2) * factorX;
             const sourceY = (initialDisplayHeight / 2 - imgY - extractHeightOnDisplay / 2) * factorY;
-            const sourceW = extractWidthOnDisplay * factorX;
-            const sourceH = extractHeightOnDisplay * factorY;
 
-            ctx.drawImage(
-                loadedImgElement,
-                sourceX, sourceY, sourceW, sourceH,
-                0, 0, 100, 100
-            );
+            ctx.drawImage(loadedImgElement, sourceX, sourceY, extractWidthOnDisplay * factorX, extractHeightOnDisplay * factorY, 0, 0, 100, 100);
 
             const finalizedImgDataUrl = canvas.toDataURL('image/png');
             document.getElementById('global-header-avatar').src = finalizedImgDataUrl;
             document.getElementById('account-view-avatar').src = finalizedImgDataUrl;
 
             if (currentSessionUser) {
-                const database = fetchStoredDatabase();
-                const currentMatchedRecord = database.find(user => user.uid === currentSessionUser);
-                if (currentMatchedRecord) {
-                    currentMatchedRecord.data.profilePic = finalizedImgDataUrl;
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
-                }
+                database.ref('users/' + currentSessionUser).update({
+                    profilePic: finalizedImgDataUrl
+                });
             }
 
             closeSquareCropper();
-            alert("Profile picture saved into database permanently!");
+            alert("Profile picture saved!");
         }
 
-        function openTankRefillModal() {
-            document.getElementById('tankRefillModal').classList.remove('hidden');
-        }
-
-        function closeTankRefillModal() {
-            document.getElementById('tankRefillModal').classList.add('hidden');
-        }
+        function openTankRefillModal() { document.getElementById('tankRefillModal').classList.remove('hidden'); }
+        function closeTankRefillModal() { document.getElementById('tankRefillModal').classList.add('hidden'); }
 
         function purchaseTankBoost(tapsAmount, costCoins) {
             if (totalCoins < costCoins) {
-                alert("Insufficient wallet balance for this booster package purchase!");
+                alert("Insufficient wallet balance!");
                 return;
             }
             if (energyLimit + tapsAmount > maxEnergyCapacity) {
-                alert(`Cannot exceed active ceiling limit! Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
+                alert(`Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
                 return;
             }
 
@@ -1634,14 +1636,8 @@
         }
 
         function upgradeMaxEnergyLimit() {
-            if (totalCoins < 5000) {
-                alert("Permanent structural expansion requires 5,000 coins.");
-                return;
-            }
-            if (maxEnergyCapacity === 1000) {
-                alert("Expansion already completed!");
-                return;
-            }
+            if (totalCoins < 5000) { alert("Requires 5,000 coins."); return; }
+            if (maxEnergyCapacity === 1000) { alert("Expansion already completed!"); return; }
 
             totalCoins -= 5000;
             maxEnergyCapacity = 1000;
@@ -1655,37 +1651,27 @@
             alert("Energy tank capacity limit expanded to 1,000 taps!");
         }
 
-        function openAccountActionModal() {
-            document.getElementById('accountOptionsModal').classList.remove('hidden');
-        }
-
-        function closeAccountActionModal() {
-            document.getElementById('accountOptionsModal').classList.add('hidden');
-        }
+        function openAccountActionModal() { document.getElementById('accountOptionsModal').classList.remove('hidden'); }
+        function closeAccountActionModal() { document.getElementById('accountOptionsModal').classList.add('hidden'); }
 
         function executeSessionLogout() {
             closeAccountActionModal();
-            currentSessionUser = null;
-            document.getElementById('admin-panel-card').style.display = 'none';
-            document.getElementById('dashboard-screen').style.display = 'none';
-            document.getElementById('auth-screen').style.display = 'block';
-            alert("Logged out securely.");
+            auth.signOut().then(() => {
+                currentSessionUser = null;
+                alert("Logged out securely.");
+            });
         }
 
         function executeAccountDeletion() {
-            const approval = confirm("Permanently delete your account registration?");
-            if(approval) {
-                if (currentSessionUser) {
-                    let database = fetchStoredDatabase();
-                    database = database.filter(user => user.uid !== currentSessionUser);
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(database));
+            if(confirm("Permanently delete your account registration?")) {
+                const user = auth.currentUser;
+                if (user) {
+                    database.ref('users/' + user.uid).remove();
+                    user.delete().then(() => {
+                        closeAccountActionModal();
+                        alert("Account wiped successfully.");
+                    });
                 }
-                closeAccountActionModal();
-                currentSessionUser = null;
-                document.getElementById('admin-panel-card').style.display = 'none';
-                document.getElementById('dashboard-screen').style.display = 'none';
-                document.getElementById('auth-screen').style.display = 'block';
-                alert("Your account data was wiped successfully.");
             }
         }
 
@@ -1711,4 +1697,5 @@
         }
     </script>
 </body>
+</html></body>
 </html>
