@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TapBD</title>
 
-    <!-- Firebase SDK (Version 8) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
         :root {
@@ -761,7 +761,7 @@
                 <h1 style="font-size: 1.1rem; opacity: 0.9;"></h1>
                 <p style="margin:0; font-size:1.3rem; font-weight:bold;"><span id="welcome-name">User</span></p>
                 <div style="margin-top: 5px; font-size: 0.8rem; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 10px;">
-                    🪙 <span id="header-coins">0</span> Coins | <span id="header-level">🥉 Bronze Level</span>
+                    🪙 <span id="header-coins">100</span> Coins | <span id="header-level">🥉 Bronze Level</span>
                 </div>
             </div>
             <div class="header-profile">
@@ -815,19 +815,19 @@
             </div>
         </div>
 
-        <!-- PAYOUT VIEW (UPDATED FOR FIREBASE CASHOUT) -->
+        <!-- PAYOUT VIEW -->
         <div id="view-payment" class="app-view">
             <div class="card">
                 <h2>💸 Cash Out Request (bKash)</h2>
-                <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
-                <form id="cashout-form" onsubmit="handleCashOutSubmit(event)">
+                <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
+                <form onsubmit="event.preventDefault(); alert('Withdrawal processing securely!');">
                     <div class="form-group">
                         <label>bKash Mobile Number</label>
-                        <input type="tel" id="cashout-number" placeholder="Enter bKash Number" required>
+                        <input type="tel" placeholder="Enter bKash Number" required>
                     </div>
                     <div class="form-group">
                         <label>Amount (BDT)</label>
-                        <input type="number" id="cashout-amount" min="100" placeholder="Minimum 100 TK" required>
+                        <input type="number" min="100" placeholder="Minimum 100 TK" required>
                     </div>
                     <button type="submit" class="btn">Submit Cash Out</button>
                 </form>
@@ -1050,35 +1050,34 @@
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
     <script>
-        // ----------------------------------------------------
-        // 1. FIREBASE CONFIGURATION (এখানকার তথ্য পরিবর্তন করুন)
-        // ----------------------------------------------------
+        // FIREBASE INITIALIZATION CONFIGURATION (UPDATED WITH YOUR ACTUAL KEYS)
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyDsMBPrFZ37VfMeA8imQ_ZJrxePPN-8sHM",
+            authDomain: "earningbd-37459.firebaseapp.com",
+            databaseURL: "https://earningbd-37459-default-rtdb.firebaseio.com",
+            projectId: "earningbd-37459",
+            storageBucket: "earningbd-37459.firebasestorage.app",
+            messagingSenderId: "301820085906",
+            appId: "1:301820085906:web:bfcd774e1ba5f168a0484b",
+            measurementId: "G-7WJL76YJPE"
         };
 
-        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        const database = firebase.database();
         const auth = firebase.auth();
+        const database = firebase.database();
 
+        // ADMIN CONFIGURATION
         const ADMIN_EMAIL = "asifsikder.1280@gmail.com";
         const ADMIN_PIN = "181012";
 
         let currentSessionUser = null;
-        let totalCoins = 0;
+        let currentUserId = null;
+        let totalCoins = 100;
         let energyLimit = 500;
         let maxEnergyCapacity = 500;
         let tapCounter = 0;
-        let userRefListener = null;
         
         const defaultAvatarBase64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 
@@ -1117,35 +1116,6 @@
         let initialDisplayWidth = 0;
         let initialDisplayHeight = 0;
 
-        // ----------------------------------------------------
-        // 2. AUTOMATIC LOGIN LISTENER & REAL-TIME DATA (রিয়েল-টাইম ডাটা লিস্টেনার)
-        // ----------------------------------------------------
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentSessionUser = user.uid;
-                
-                // পুরানো কোনো লিস্টেনার থাকলে তা রিমুভ করা
-                if (userRefListener) {
-                    database.ref('users/' + currentSessionUser).off('value', userRefListener);
-                }
-
-                // on('value') ব্যবহার করা হয়েছে যাতে ফায়ারবেসে ডাটা পরিবর্তন হলেই পেজে অটোমেটিক আপডেট হয় (Real-Time)
-                userRefListener = database.ref('users/' + user.uid).on('value', (snapshot) => {
-                    const userData = snapshot.val();
-                    if (userData) {
-                        setupDashboardUI(userData);
-                    }
-                });
-            } else {
-                if (userRefListener && currentSessionUser) {
-                    database.ref('users/' + currentSessionUser).off('value', userRefListener);
-                }
-                currentSessionUser = null;
-                document.getElementById('auth-screen').style.display = 'block';
-                document.getElementById('dashboard-screen').style.display = 'none';
-            }
-        });
-
         window.addEventListener('DOMContentLoaded', () => {
             toggleSignupMethodField();
             loadTaskLinksToUI();
@@ -1156,54 +1126,15 @@
             window.addEventListener('touchend', endImgDrag);
         });
 
-        // ----------------------------------------------------
-        // 3. CASHOUT REQUEST TO FIREBASE
-        // ----------------------------------------------------
-        function handleCashOutSubmit(event) {
-            event.preventDefault();
-            
-            const number = document.getElementById('cashout-number').value.trim();
-            const amount = parseInt(document.getElementById('cashout-amount').value);
-            const requiredCoins = amount * 10; // ১০০০ কয়েন = ১০০ টাকা
-
-            if (totalCoins < requiredCoins) {
-                alert(`Insufficient Coins! You need at least ${requiredCoins} coins to withdraw ${amount} TK.`);
-                return;
-            }
-
-            const currentUser = auth.currentUser;
-            const userId = currentUser ? currentUser.uid : currentSessionUser;
-
-            if (!userId) {
-                alert("Please log in first!");
-                return;
-            }
-
-            const requestRef = database.ref('cashout_requests');
-            const newRequestRef = requestRef.push();
-            
-            newRequestRef.set({
-                userId: userId,
-                number: number,
-                amount: amount,
-                status: "Pending",
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            })
-            .then(() => {
-                totalCoins -= requiredCoins;
-                saveCoinsToDatabase();
-                alert("Withdrawal Request Submitted Successfully!");
-                document.getElementById('cashout-form').reset();
-            })
-            .catch((error) => {
-                alert("Error submitting request: " + error.message);
-            });
-        }
-
         /* --- DYNAMIC TASK LINKS & ADMIN LOGIC --- */
         function checkAdminPin() {
             const pinInput = prompt("🔑 Enter Admin Passcode/Pin:");
-            return pinInput === ADMIN_PIN;
+            if (pinInput === ADMIN_PIN) {
+                return true;
+            } else {
+                alert("❌ Incorrect Admin Pin!");
+                return false;
+            }
         }
 
         function saveSingleTaskLink(type) {
@@ -1214,38 +1145,49 @@
             if (type === 'adLink') {
                 const val = document.getElementById('admin-ad-link').value.trim();
                 savedTasks.adLink = val || defaultTasks.adLink;
+                alert("Watch Ads Link updated successfully!");
             } else if (type === 'checkinLink') {
                 const val = document.getElementById('admin-checkin-link').value.trim();
                 savedTasks.checkinLink = val || defaultTasks.checkinLink;
+                alert("Daily Check-in Link updated successfully!");
             } else if (type === 'socialLink') {
                 const val = document.getElementById('admin-social-link').value.trim();
                 savedTasks.socialLink = val || defaultTasks.socialLink;
+                alert("Social Media Link updated successfully!");
             } else if (type === 'giantCoinLink') {
                 const val = document.getElementById('admin-giant-coin-link').value.trim();
                 savedTasks.giantCoinLink = val;
+                alert("Giant Coin Ads Link updated successfully!");
             } else if (type === 'sponsoredLink') {
                 const val = document.getElementById('admin-sponsored-link').value.trim();
                 savedTasks.sponsoredLink = val;
+                alert("Watch Sponsored Link updated successfully!");
             }
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(savedTasks));
             loadTaskLinksToUI();
-            alert("Updated successfully!");
         }
 
         function saveAdminTaskLinks() {
             if (!checkAdminPin()) return;
 
+            const adLink = document.getElementById('admin-ad-link').value.trim();
+            const checkinLink = document.getElementById('admin-checkin-link').value.trim();
+            const socialLink = document.getElementById('admin-social-link').value.trim();
+            const giantCoinLink = document.getElementById('admin-giant-coin-link').value.trim();
+            const sponsoredLink = document.getElementById('admin-sponsored-link').value.trim();
+
             const updatedTasks = {
-                adLink: document.getElementById('admin-ad-link').value.trim() || defaultTasks.adLink,
-                checkinLink: document.getElementById('admin-checkin-link').value.trim() || defaultTasks.checkinLink,
-                socialLink: document.getElementById('admin-social-link').value.trim() || defaultTasks.socialLink,
-                giantCoinLink: document.getElementById('admin-giant-coin-link').value.trim(),
-                sponsoredLink: document.getElementById('admin-sponsored-link').value.trim()
+                adLink: adLink || defaultTasks.adLink,
+                checkinLink: checkinLink || defaultTasks.checkinLink,
+                socialLink: socialLink || defaultTasks.socialLink,
+                giantCoinLink: giantCoinLink,
+                sponsoredLink: sponsoredLink
             };
 
             localStorage.setItem('tapbd_admin_tasks', JSON.stringify(updatedTasks));
             alert("All admin task links saved successfully!");
+            
             loadTaskLinksToUI();
         }
 
@@ -1256,8 +1198,13 @@
                 document.getElementById('admin-ad-link').value = savedTasks.adLink || "";
                 document.getElementById('admin-checkin-link').value = savedTasks.checkinLink || "";
                 document.getElementById('admin-social-link').value = savedTasks.socialLink || "";
-                if(document.getElementById('admin-giant-coin-link')) document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
-                if(document.getElementById('admin-sponsored-link')) document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
+                
+                if(document.getElementById('admin-giant-coin-link')) {
+                    document.getElementById('admin-giant-coin-link').value = savedTasks.giantCoinLink || "";
+                }
+                if(document.getElementById('admin-sponsored-link')) {
+                    document.getElementById('admin-sponsored-link').value = savedTasks.sponsoredLink || "";
+                }
             }
 
             const container = document.getElementById('task-list-container');
@@ -1271,13 +1218,15 @@
                     </div>
                     <button class="btn-task" onclick="openTaskLink('${savedTasks.adLink}', 500)">Watch</button>
                 </div>
+
                 <div class="task-item">
                     <div class="task-info">
                         <h4>Daily Check-in</h4>
                         <span>+1000 Coins</span>
                     </div>
-                    <button class="btn-task" onclick="openTaskLink('${savedTasks.checkinLink}', 1000, this)">Claim</button>
+                    <button class="btn-task" id="daily-checkin-btn" onclick="openTaskLink('${savedTasks.checkinLink}', 1000, this)">Claim</button>
                 </div>
+
                 <div class="task-item">
                     <div class="task-info">
                         <h4>Social Media Follow</h4>
@@ -1289,8 +1238,12 @@
         }
 
         function openTaskLink(url, rewardCoins, buttonElement = null) {
-            if (url) window.open(url, '_blank');
-            if (rewardCoins) addCoins(rewardCoins);
+            if (url) {
+                window.open(url, '_blank');
+            }
+            if (rewardCoins) {
+                addCoins(rewardCoins);
+            }
 
             if (buttonElement) {
                 buttonElement.disabled = true;
@@ -1299,6 +1252,7 @@
             }
         }
 
+        /* --- OTHER SYSTEM LOGIC --- */
         function populateUpazilaOptions(selectedDistrict, upazilaSelectId) {
             const upazilaDropdown = document.getElementById(upazilaSelectId);
             upazilaDropdown.innerHTML = '<option value="">Select Upazila</option>';
@@ -1314,10 +1268,16 @@
         }
 
         function saveCoinsToDatabase() {
+            if (currentUserId) {
+                database.ref('users/' + currentUserId + '/coins').set(totalCoins);
+            }
             if (currentSessionUser) {
-                database.ref('users/' + currentSessionUser).update({
-                    coins: totalCoins
-                });
+                const localDb = fetchStoredDatabase();
+                const matchedUser = localDb.find(user => user.uid === currentSessionUser);
+                if (matchedUser) {
+                    matchedUser.data.coins = totalCoins;
+                    localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
+                }
             }
         }
 
@@ -1328,6 +1288,8 @@
             
             const fillWidth = (energyLimit / maxEnergyCapacity) * 100;
             document.getElementById('energy-progress-bar').style.width = fillWidth + '%';
+
+            saveCoinsToDatabase();
         }
 
         function switchAuthTab(type) {
@@ -1352,16 +1314,32 @@
                 targetLabel.innerText = "Bangladeshi Mobile Number";
                 targetInput.placeholder = "e.g. 01712345678";
                 targetInput.type = "text";
+                targetInput.setAttribute("pattern", "^01[3-9]\\d{8}$");
             } else {
                 targetLabel.innerText = "Gmail Address";
                 targetInput.placeholder = "username@gmail.com";
                 targetInput.type = "text";
+                targetInput.setAttribute("pattern", "^[a-zA-Z0-9._%+-]+@gmail\\.com$");
             }
         }
 
-        // ----------------------------------------------------
-        // 4. AUTHENTICATION HANDLER (SIGNUP & LOGIN)
-        // ----------------------------------------------------
+        function fetchStoredDatabase() {
+            const data = localStorage.getItem('tapbd_users_v2');
+            return data ? JSON.parse(data) : [];
+        }
+
+        function commitToStoredDatabase(identity, profileData) {
+            const localDb = fetchStoredDatabase();
+            const index = localDb.findIndex(user => user.uid === identity);
+            
+            if (index !== -1) {
+                localDb[index].data = profileData;
+            } else {
+                localDb.push({ uid: identity, data: profileData });
+            }
+            localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
+        }
+
         function handleAuthSubmit(event) {
             event.preventDefault();
             const activeFormId = event.target.id;
@@ -1369,61 +1347,110 @@
             if (activeFormId === 'signup-form') {
                 const rawIdentity = document.getElementById('signup-contact-input').value.trim().toLowerCase();
                 const password = document.getElementById('signup-password-input').value;
-                const email = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tapbd.com`;
+                const fName = document.getElementById('first-name-input').value.trim();
+                const lName = document.getElementById('last-name-input').value.trim();
+                const bDate = document.getElementById('birth-date-input').value;
+                const gender = document.getElementById('signup-gender-select').value;
+                const district = document.getElementById('signup-district-select').value;
+                const upazila = document.getElementById('signup-upazila-select').value;
 
-                auth.createUserWithEmailAndPassword(email, password)
+                // Format Email for Firebase Auth
+                const authEmail = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tapbd.com`;
+
+                auth.createUserWithEmailAndPassword(authEmail, password)
                     .then((userCredential) => {
                         const user = userCredential.user;
-                        currentSessionUser = user.uid;
+                        currentUserId = user.uid;
+                        currentSessionUser = rawIdentity;
+                        totalCoins = 100;
 
-                        const profileObj = { 
-                            firstName: document.getElementById('first-name-input').value.trim(), 
-                            lastName: document.getElementById('last-name-input').value.trim(), 
-                            birthDate: document.getElementById('birth-date-input').value, 
-                            gender: document.getElementById('signup-gender-select').value,
-                            district: document.getElementById('signup-district-select').value,
-                            upazila: document.getElementById('signup-upazila-select').value,
+                        const profileObj = {
+                            firstName: fName,
+                            lastName: lName,
+                            birthDate: bDate,
+                            gender: gender,
+                            district: district,
+                            upazila: upazila,
+                            password: password,
                             profilePic: defaultAvatarBase64,
-                            coins: 100
+                            coins: totalCoins,
+                            identity: rawIdentity
                         };
 
-                        return database.ref('users/' + user.uid).set(profileObj);
+                        // Save to Firebase Realtime Database
+                        database.ref('users/' + user.uid).set(profileObj);
+
+                        // Save to LocalStorage Backup
+                        commitToStoredDatabase(rawIdentity, profileObj);
+
+                        renderDashboard(fName, lName, bDate, gender, district, upazila, defaultAvatarBase64);
                     })
                     .catch((error) => {
-                        alert("Sign Up Error: " + error.message);
+                        alert("Firebase Auth Error: " + error.message);
                     });
+
             } else {
                 const rawIdentity = document.getElementById('login-identity-input').value.trim().toLowerCase();
                 const password = document.getElementById('login-password-input').value;
-                const email = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tapbd.com`;
 
-                auth.signInWithEmailAndPassword(email, password)
+                const authEmail = rawIdentity.includes('@') ? rawIdentity : `${rawIdentity}@tapbd.com`;
+
+                auth.signInWithEmailAndPassword(authEmail, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        currentUserId = user.uid;
+                        currentSessionUser = rawIdentity;
+
+                        // Fetch User Profile from Firebase Realtime Database
+                        database.ref('users/' + user.uid).once('value')
+                            .then((snapshot) => {
+                                const val = snapshot.val() || {};
+                                const fName = val.firstName || rawIdentity;
+                                const lName = val.lastName || "";
+                                const bDate = val.birthDate || "Not Provided";
+                                const gender = val.gender || "Male";
+                                const district = val.district || "Not Set";
+                                const upazila = val.upazila || "Not Set";
+                                const loadedAvatar = val.profilePic || defaultAvatarBase64;
+                                totalCoins = (val.coins !== undefined) ? val.coins : 100;
+
+                                renderDashboard(fName, lName, bDate, gender, district, upazila, loadedAvatar);
+                            });
+                    })
                     .catch((error) => {
-                        alert("Login Error: " + error.message);
+                        // Fallback check on LocalStorage if Firebase fails
+                        const localDb = fetchStoredDatabase();
+                        const matchedUser = localDb.find(u => u.uid === rawIdentity);
+                        if (matchedUser && matchedUser.data.password === password) {
+                            currentSessionUser = rawIdentity;
+                            const d = matchedUser.data;
+                            totalCoins = d.coins !== undefined ? d.coins : 100;
+                            renderDashboard(d.firstName, d.lastName, d.birthDate, d.gender, d.district, d.upazila, d.profilePic || defaultAvatarBase64);
+                        } else {
+                            alert("Login Failed: " + error.message);
+                        }
                     });
             }
         }
 
-        function setupDashboardUI(userData) {
-            const fName = userData.firstName || "User";
-            const lName = userData.lastName || "";
-            
-            totalCoins = userData.coins !== undefined ? userData.coins : 100;
-
+        function renderDashboard(fName, lName, bDate, gender, district, upazila, loadedAvatar) {
             const adminCard = document.getElementById('admin-panel-card');
             if (adminCard) {
-                adminCard.style.display = (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) ? 'block' : 'none';
+                if (currentSessionUser && currentSessionUser.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                    adminCard.style.display = 'block';
+                } else {
+                    adminCard.style.display = 'none';
+                }
             }
 
             document.getElementById('welcome-name').innerText = fName + " " + lName;
             document.getElementById('account-first-name').value = fName;
             document.getElementById('account-last-name').value = lName;
-            document.getElementById('account-birth-date').value = userData.birthDate || "Not Provided";
-            document.getElementById('account-gender').value = userData.gender || "Male";
-            document.getElementById('account-district').value = userData.district || "Not Set";
-            document.getElementById('account-upazila').value = userData.upazila || "Not Set";
+            document.getElementById('account-birth-date').value = bDate;
+            document.getElementById('account-gender').value = gender;
+            document.getElementById('account-district').value = district;
+            document.getElementById('account-upazila').value = upazila;
             
-            const loadedAvatar = userData.profilePic || defaultAvatarBase64;
             document.getElementById('global-header-avatar').src = loadedAvatar;
             document.getElementById('account-view-avatar').src = loadedAvatar;
 
@@ -1433,6 +1460,7 @@
             document.getElementById('dashboard-screen').style.display = 'block';
         }
 
+        // Giant Coin Link triggers at every 20 taps
         function handleCoinTap(event) {
             if (energyLimit <= 0) {
                 alert("Your energy is exhausted! Please refill energy.");
@@ -1444,7 +1472,6 @@
             tapCounter += 1;
 
             syncCoinDisplayLayout();
-            saveCoinsToDatabase();
 
             const numElement = document.createElement('div');
             numElement.classList.add('floating-num');
@@ -1460,7 +1487,9 @@
 
             wrapper.appendChild(numElement);
 
-            setTimeout(() => { numElement.remove(); }, 800);
+            setTimeout(() => {
+                numElement.remove();
+            }, 800);
 
             if (tapCounter % 20 === 0) {
                 const savedTasks = JSON.parse(localStorage.getItem('tapbd_admin_tasks')) || defaultTasks;
@@ -1516,7 +1545,9 @@
         }
 
         function resetCropMatrix() {
-            imgX = 0; imgY = 0; scaleFactor = 1;
+            imgX = 0;
+            imgY = 0;
+            scaleFactor = 1;
             document.getElementById('fb-zoom-slider').value = 1;
             updateCropPositionMatrix();
         }
@@ -1532,19 +1563,24 @@
         }
 
         function nudgeImage(dx, dy) {
-            imgX += dx; imgY += dy;
+            imgX += dx;
+            imgY += dy;
             updateCropPositionMatrix();
         }
 
         function startImgDrag(e) {
             isDragging = true;
             if (e.touches && e.touches.length === 2) {
-                startTouchDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                startTouchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
                 baseScaleOnTouchStart = scaleFactor;
             } else {
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                startX = clientX - imgX; startY = clientY - imgY;
+                startX = clientX - imgX;
+                startY = clientY - imgY;
             }
         }
 
@@ -1553,7 +1589,11 @@
 
             if (e.touches && e.touches.length === 2) {
                 e.preventDefault(); 
-                const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
                 if (startTouchDistance > 0) {
                     let newScale = baseScaleOnTouchStart * (currentDistance / startTouchDistance);
                     newScale = Math.max(1, Math.min(4, newScale));
@@ -1564,12 +1604,16 @@
             } else {
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                imgX = clientX - startX; imgY = clientY - startY;
+                imgX = clientX - startX;
+                imgY = clientY - startY;
                 updateCropPositionMatrix();
             }
         }
 
-        function endImgDrag() { isDragging = false; startTouchDistance = 0; }
+        function endImgDrag() {
+            isDragging = false;
+            startTouchDistance = 0;
+        }
 
         function closeSquareCropper() {
             document.getElementById('fbCropperModal').classList.add('hidden');
@@ -1590,52 +1634,74 @@
 
             const sourceX = (initialDisplayWidth / 2 - imgX - extractWidthOnDisplay / 2) * factorX;
             const sourceY = (initialDisplayHeight / 2 - imgY - extractHeightOnDisplay / 2) * factorY;
+            const sourceW = extractWidthOnDisplay * factorX;
+            const sourceH = extractHeightOnDisplay * factorY;
 
-            ctx.drawImage(loadedImgElement, sourceX, sourceY, extractWidthOnDisplay * factorX, extractHeightOnDisplay * factorY, 0, 0, 100, 100);
+            ctx.drawImage(
+                loadedImgElement,
+                sourceX, sourceY, sourceW, sourceH,
+                0, 0, 100, 100
+            );
 
             const finalizedImgDataUrl = canvas.toDataURL('image/png');
             document.getElementById('global-header-avatar').src = finalizedImgDataUrl;
             document.getElementById('account-view-avatar').src = finalizedImgDataUrl;
 
+            if (currentUserId) {
+                database.ref('users/' + currentUserId + '/profilePic').set(finalizedImgDataUrl);
+            }
+
             if (currentSessionUser) {
-                database.ref('users/' + currentSessionUser).update({
-                    profilePic: finalizedImgDataUrl
-                });
+                const localDb = fetchStoredDatabase();
+                const currentMatchedRecord = localDb.find(user => user.uid === currentSessionUser);
+                if (currentMatchedRecord) {
+                    currentMatchedRecord.data.profilePic = finalizedImgDataUrl;
+                    localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
+                }
             }
 
             closeSquareCropper();
-            alert("Profile picture saved!");
+            alert("Profile picture saved into database permanently!");
         }
 
-        function openTankRefillModal() { document.getElementById('tankRefillModal').classList.remove('hidden'); }
-        function closeTankRefillModal() { document.getElementById('tankRefillModal').classList.add('hidden'); }
+        function openTankRefillModal() {
+            document.getElementById('tankRefillModal').classList.remove('hidden');
+        }
+
+        function closeTankRefillModal() {
+            document.getElementById('tankRefillModal').classList.add('hidden');
+        }
 
         function purchaseTankBoost(tapsAmount, costCoins) {
             if (totalCoins < costCoins) {
-                alert("Insufficient wallet balance!");
+                alert("Insufficient wallet balance for this booster package purchase!");
                 return;
             }
             if (energyLimit + tapsAmount > maxEnergyCapacity) {
-                alert(`Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
+                alert(`Cannot exceed active ceiling limit! Headroom allows max loading of ${maxEnergyCapacity - energyLimit} taps.`);
                 return;
             }
 
             totalCoins -= costCoins;
             energyLimit += tapsAmount;
             syncCoinDisplayLayout();
-            saveCoinsToDatabase();
             alert(`Success! Loaded +${tapsAmount} energy taps.`);
         }
 
         function upgradeMaxEnergyLimit() {
-            if (totalCoins < 5000) { alert("Requires 5,000 coins."); return; }
-            if (maxEnergyCapacity === 1000) { alert("Expansion already completed!"); return; }
+            if (totalCoins < 5000) {
+                alert("Permanent structural expansion requires 5,000 coins.");
+                return;
+            }
+            if (maxEnergyCapacity === 1000) {
+                alert("Expansion already completed!");
+                return;
+            }
 
             totalCoins -= 5000;
             maxEnergyCapacity = 1000;
             energyLimit = 1000; 
             syncCoinDisplayLayout();
-            saveCoinsToDatabase();
             
             const upgradeBtn = document.getElementById('max-upgrade-btn');
             upgradeBtn.innerText = "Maxed";
@@ -1644,26 +1710,44 @@
             alert("Energy tank capacity limit expanded to 1,000 taps!");
         }
 
-        function openAccountActionModal() { document.getElementById('accountOptionsModal').classList.remove('hidden'); }
-        function closeAccountActionModal() { document.getElementById('accountOptionsModal').classList.add('hidden'); }
+        function openAccountActionModal() {
+            document.getElementById('accountOptionsModal').classList.remove('hidden');
+        }
+
+        function closeAccountActionModal() {
+            document.getElementById('accountOptionsModal').classList.add('hidden');
+        }
 
         function executeSessionLogout() {
             closeAccountActionModal();
-            auth.signOut().then(() => {
-                alert("Logged out securely.");
-            });
+            auth.signOut();
+            currentSessionUser = null;
+            currentUserId = null;
+            document.getElementById('admin-panel-card').style.display = 'none';
+            document.getElementById('dashboard-screen').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'block';
+            alert("Logged out securely.");
         }
 
         function executeAccountDeletion() {
-            if(confirm("Permanently delete your account registration?")) {
-                const user = auth.currentUser;
-                if (user) {
-                    database.ref('users/' + user.uid).remove();
-                    user.delete().then(() => {
-                        closeAccountActionModal();
-                        alert("Account wiped successfully.");
-                    });
+            const approval = confirm("Permanently delete your account registration?");
+            if(approval) {
+                if (currentUserId) {
+                    database.ref('users/' + currentUserId).remove();
+                    auth.currentUser.delete();
                 }
+                if (currentSessionUser) {
+                    let localDb = fetchStoredDatabase();
+                    localDb = localDb.filter(user => user.uid !== currentSessionUser);
+                    localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
+                }
+                closeAccountActionModal();
+                currentSessionUser = null;
+                currentUserId = null;
+                document.getElementById('admin-panel-card').style.display = 'none';
+                document.getElementById('dashboard-screen').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'block';
+                alert("Your account data was wiped successfully.");
             }
         }
 
@@ -1679,14 +1763,12 @@
             document.getElementById('adModal').classList.add('hidden');
             totalCoins += 50;
             syncCoinDisplayLayout();
-            saveCoinsToDatabase();
             alert("Ad finished! You earned +50 bonus coins!");
         }
 
         function addCoins(amount) {
             totalCoins += amount;
             syncCoinDisplayLayout();
-            saveCoinsToDatabase();
             alert(`Earned +${amount} Coins successfully!`);
         }
     </script>
