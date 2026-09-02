@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TapBD</title>
+    <title>Earningbd - Tap & Earn</title>
 
     <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -37,6 +37,7 @@
         * {
             -webkit-tap-highlight-color: transparent;
             outline: none;
+            box-sizing: border-box;
         }
 
         .container {
@@ -651,7 +652,7 @@
     <div id="auth-screen">
         <div class="auth-header">
             <h1>Earningbd</h1>
-            <p>start earning with us</p>
+            <p>Start earning with us</p>
         </div>
 
         <div class="card">
@@ -701,7 +702,7 @@
 
                 <div class="name-grid" style="margin-top: 15px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>District Name </label>
+                        <label>District Name</label>
                         <select id="signup-district-select" onchange="populateUpazilaOptions(this.value, 'signup-upazila-select')" required>
                             <option value="">Select District</option>
                             <option value="Dhaka">Dhaka</option>
@@ -758,7 +759,7 @@
     <div class="container" id="dashboard-screen">
         <header>
             <div>
-                <h1 style="font-size: 1.1rem; opacity: 0.9;"></h1>
+                <h1 style="font-size: 1.1rem; opacity: 0.9;">Welcome</h1>
                 <p style="margin:0; font-size:1.3rem; font-weight:bold;"><span id="welcome-name">User</span></p>
                 <div style="margin-top: 5px; font-size: 0.8rem; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 10px;">
                     🪙 <span id="header-coins">100</span> Coins | <span id="header-level">🥉 Bronze Level</span>
@@ -805,7 +806,7 @@
             </div>
         </div>
 
-        <!-- TASKS VIEW (DYNAMIC) -->
+        <!-- TASKS VIEW -->
         <div id="view-tasks" class="app-view">
             <div class="card">
                 <h2>✅ Tasks & Rewards</h2>
@@ -820,7 +821,7 @@
             <div class="card">
                 <h2>💸 Cash Out Request (bKash)</h2>
                 <div class="notice">⚠️ <strong>সর্বনিম্ন উত্তোলন:</strong> ১০০ টাকা (১০০০ কয়েন = ১০০ টাকা)</div>
-                <form onsubmit="event.preventDefault(); alert('Withdrawal processing securely!');">
+                <form onsubmit="event.preventDefault(); alert('Withdrawal request submitted securely!');">
                     <div class="form-group">
                         <label>bKash Mobile Number</label>
                         <input type="tel" placeholder="Enter bKash Number" required>
@@ -1050,17 +1051,18 @@
     <canvas id="hidden-crop-canvas" width="100" height="100"></canvas>
 
     <script>
-        // FIREBASE INITIALIZATION CONFIGURATION (UPDATED WITH YOUR ACTUAL KEYS)
+        // FIREBASE INITIALIZATION CONFIGURATION
         const firebaseConfig = {
-  apiKey: "AIzaSyBGa3Dx2F1Gex6gM6MNaHf_7U7kHddR3-M",
-  authDomain: "earningbd-c993a.firebaseapp.com",
-  databaseURL: "https://earningbd-c993a-default-rtdb.firebaseio.com",
-  projectId: "earningbd-c993a",
-  storageBucket: "earningbd-c993a.firebasestorage.app",
-  messagingSenderId: "924229894443",
-  appId: "1:924229894443:web:bf0dc4b46b88512381856e",
-  measurementId: "G-NX9S4YF5Y7"
-};
+            apiKey: "AIzaSyBGa3Dx2F1Gex6gM6MNaHf_7U7kHddR3-M",
+            authDomain: "earningbd-c993a.firebaseapp.com",
+            databaseURL: "https://earningbd-c993a-default-rtdb.firebaseio.com",
+            projectId: "earningbd-c993a",
+            storageBucket: "earningbd-c993a.firebasestorage.app",
+            messagingSenderId: "924229894443",
+            appId: "1:924229894443:web:bf0dc4b46b88512381856e",
+            measurementId: "G-NX9S4YF5Y7"
+        };
+        
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -1251,7 +1253,7 @@
             }
         }
 
-        /* --- OTHER SYSTEM LOGIC --- */
+        /* --- AUTHENTICATION & CORE ENGINE LOGIC --- */
         function populateUpazilaOptions(selectedDistrict, upazilaSelectId) {
             const upazilaDropdown = document.getElementById(upazilaSelectId);
             upazilaDropdown.innerHTML = '<option value="">Select Upazila</option>';
@@ -1376,12 +1378,8 @@
                             identity: rawIdentity
                         };
 
-                        // Save to Firebase Realtime Database
                         database.ref('users/' + user.uid).set(profileObj);
-
-                        // Save to LocalStorage Backup
                         commitToStoredDatabase(rawIdentity, profileObj);
-
                         renderDashboard(fName, lName, bDate, gender, district, upazila, defaultAvatarBase64);
                     })
                     .catch((error) => {
@@ -1400,7 +1398,6 @@
                         currentUserId = user.uid;
                         currentSessionUser = rawIdentity;
 
-                        // Fetch User Profile from Firebase Realtime Database
                         database.ref('users/' + user.uid).once('value')
                             .then((snapshot) => {
                                 const val = snapshot.val() || {};
@@ -1417,7 +1414,6 @@
                             });
                     })
                     .catch((error) => {
-                        // Fallback check on LocalStorage if Firebase fails
                         const localDb = fetchStoredDatabase();
                         const matchedUser = localDb.find(u => u.uid === rawIdentity);
                         if (matchedUser && matchedUser.data.password === password) {
@@ -1459,7 +1455,7 @@
             document.getElementById('dashboard-screen').style.display = 'block';
         }
 
-        // Giant Coin Link triggers at every 20 taps
+        // Tap Game Mechanics
         function handleCoinTap(event) {
             if (energyLimit <= 0) {
                 alert("Your energy is exhausted! Please refill energy.");
@@ -1733,7 +1729,7 @@
             if(approval) {
                 if (currentUserId) {
                     database.ref('users/' + currentUserId).remove();
-                    auth.currentUser.delete();
+                    if (auth.currentUser) auth.currentUser.delete();
                 }
                 if (currentSessionUser) {
                     let localDb = fetchStoredDatabase();
