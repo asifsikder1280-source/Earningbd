@@ -1265,20 +1265,29 @@
                 });
             }
         }
-
         function saveCoinsToDatabase() {
-            if (currentUserId) {
-                database.ref('users/' + currentUserId + '/coins').set(totalCoins);
-            }
-            if (currentSessionUser) {
-                const localDb = fetchStoredDatabase();
-                const matchedUser = localDb.find(user => user.uid === currentSessionUser);
-                if (matchedUser) {
-                    matchedUser.data.coins = totalCoins;
-                    localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
-                }
-            }
+    if (currentUserId) {
+        database.ref('users/' + currentUserId + '/coins').set(totalCoins)
+            .then(() => {
+                console.log("✅ Firebase-এ কয়েন সফলভাবে জমা হয়েছে!");
+            })
+            .catch((error) => {
+                console.error("❌ Firebase Error: ", error.message);
+                alert("Firebase Error: " + error.message);
+            });
+    } else {
+        console.warn("⚠️ কোনো User ID পাওয়া যায়নি (User Not Logged In)!");
+    }
+
+    if (currentSessionUser) {
+        const localDb = fetchStoredDatabase();
+        const matchedUser = localDb.find(user => user.uid === currentSessionUser);
+        if (matchedUser) {
+            matchedUser.data.coins = totalCoins;
+            localStorage.setItem('tapbd_users_v2', JSON.stringify(localDb));
         }
+    }
+}
 
         function syncCoinDisplayLayout() {
             document.getElementById('header-coins').innerText = totalCoins.toLocaleString();
